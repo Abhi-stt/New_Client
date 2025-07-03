@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/components/auth-provider"
 import { Eye, EyeOff, Shield } from "lucide-react"
+import { HOST_URL } from "@/lib/api"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -35,7 +36,7 @@ export default function LoginPage() {
     } else {
       if (!show2FA && email && password) {
         // Check if 2FA is required
-        const response = await fetch("http://localhost:5000/api/users/check-2fa", {
+        const response = await fetch(`${HOST_URL}/api/users/check-2fa`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),

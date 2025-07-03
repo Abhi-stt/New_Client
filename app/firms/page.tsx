@@ -12,6 +12,7 @@ import { CreateFirmDialog } from "@/components/dialogs/create-firm-dialog"
 import { FirmDetailsDialog } from "@/components/dialogs/firm-details-dialog"
 import { Building, Plus, Search, Filter, Users, FileText } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { HOST_URL } from "@/lib/api"
 
 export default function FirmsPage() {
   const { user } = useAuth()
@@ -33,7 +34,7 @@ export default function FirmsPage() {
 
   const fetchFirms = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/firms?clientId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/firms?clientId=${user?.id}`)
       const data = await response.json()
       setFirms(data)
     } catch (error) {

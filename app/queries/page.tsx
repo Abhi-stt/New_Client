@@ -12,6 +12,7 @@ import { CreateQueryDialog } from "@/components/dialogs/create-query-dialog"
 import { QueryDetailsDialog } from "@/components/dialogs/query-details-dialog"
 import { MessageSquare, Plus, Search, Filter, User, Clock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { HOST_URL } from "@/lib/api"
 
 export default function QueriesPage() {
   const { user } = useAuth()
@@ -33,7 +34,7 @@ export default function QueriesPage() {
 
   const fetchQueries = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/queries?role=${user?.role}&userId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/queries?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
       setQueries(data)
     } catch (error) {
@@ -54,7 +55,7 @@ export default function QueriesPage() {
 
   const updateQueryStatus = async (queryId: string, status: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/queries/${queryId}/status`, {
+      const response = await fetch(`${HOST_URL}/api/queries/${queryId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),

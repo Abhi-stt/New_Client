@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar, FileText, AlertTriangle, CheckCircle } from "lucide-react"
+import { HOST_URL } from "@/lib/api"
 
 interface ClientMasterDialogProps {
   client: any
@@ -37,7 +38,7 @@ export function ClientMasterDialog({ client, open, onOpenChange, onSuccess }: Cl
 
   const fetchComplianceData = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/clients/${client.id}/compliance`)
+      const response = await fetch(`${HOST_URL}/api/clients/${client.id}/compliance`)
       const data = await response.json()
       setComplianceData(data)
     } catch (error) {

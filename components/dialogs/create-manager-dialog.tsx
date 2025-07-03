@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
+import { HOST_URL } from "@/lib/api"
 
 interface CreateManagerDialogProps {
   open: boolean
@@ -37,7 +38,7 @@ export function CreateManagerDialog({ open, onOpenChange, onSuccess }: CreateMan
     setLoading(true)
 
     try {
-      const response = await fetch("http://localhost:5000/api/users/create-manager", {
+      const response = await fetch(`${HOST_URL}/api/users/create-manager`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

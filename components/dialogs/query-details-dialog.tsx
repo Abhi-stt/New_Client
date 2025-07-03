@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { User, Clock, MessageSquare, Tag } from "lucide-react"
+import { HOST_URL } from "@/lib/api"
 
 interface QueryDetailsDialogProps {
   query: any
@@ -35,7 +36,7 @@ export function QueryDetailsDialog({ query, open, onOpenChange, onSuccess }: Que
   const handleStatusUpdate = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`http://localhost:5000/api/queries/${query.id}/status`, {
+      const response = await fetch(`${HOST_URL}/api/queries/${query.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -57,7 +58,7 @@ export function QueryDetailsDialog({ query, open, onOpenChange, onSuccess }: Que
 
     setLoading(true)
     try {
-      const res = await fetch(`http://localhost:5000/api/queries/${query.id}/responses`, {
+      const res = await fetch(`${HOST_URL}/api/queries/${query.id}/responses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

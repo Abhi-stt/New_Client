@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast"
 import dynamic from "next/dynamic"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useRef } from "react"
+import { HOST_URL } from "@/lib/api"
 
 export default function DocumentsPage() {
   const { user } = useAuth()
@@ -33,7 +34,7 @@ export default function DocumentsPage() {
   const [selectedType, setSelectedType] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
 
-  const backendBase = "http://localhost:5000"
+  const backendBase = `${HOST_URL}`
 
   const [docxPreviewHtml, setDocxPreviewHtml] = useState<string | null>(null)
   const [showDocxModal, setShowDocxModal] = useState(false)
@@ -46,9 +47,42 @@ export default function DocumentsPage() {
     }
   }, [user])
 
+  const staticSampleDocuments = [
+    {
+      id: 'static-1',
+      name: 'GST Return Q3 2024',
+      description: 'Quarterly GST return for ABC Corporation',
+      type: 'GST Return',
+      clientName: 'ABC Corporation',
+      firmName: 'ABC Corp Pvt Ltd',
+      uploadedDate: '2024-01-10',
+      status: 'approved',
+    },
+    {
+      id: 'static-2',
+      name: 'Bank Statement December 2024',
+      description: 'Bank statement for reconciliation',
+      type: 'Bank Statement',
+      clientName: 'XYZ Industries',
+      firmName: 'XYZ Industries Ltd',
+      uploadedDate: '2024-01-12',
+      status: 'pending',
+    },
+    {
+      id: 'static-3',
+      name: 'TDS Certificate Q3 2024',
+      description: 'TDS certificate for professional services',
+      type: 'TDS Certificate',
+      clientName: 'DEF Solutions',
+      firmName: 'ABC Corp Pvt Ltd',
+      uploadedDate: '2024-01-15',
+      status: 'synced',
+    },
+  ];
+
   const fetchDocuments = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/documents?role=${user?.role}&userId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/documents?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
       setDocuments(data)
     } catch (error) {
@@ -60,7 +94,7 @@ export default function DocumentsPage() {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/clients")
+      const response = await fetch(`${HOST_URL}/api/clients`)
       const data = await response.json()
       setClients(data)
     } catch (error) {
@@ -70,7 +104,7 @@ export default function DocumentsPage() {
 
   const fetchFirms = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/firms?clientId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/firms?clientId=${user?.id}`)
       const data = await response.json()
       setFirms(data)
     } catch (error) {
@@ -78,7 +112,7 @@ export default function DocumentsPage() {
     }
   }
 
-  const filteredDocuments = documents.filter((doc: any) => {
+  const filteredDocuments = (documents.length === 0 ? staticSampleDocuments : documents).filter((doc: any) => {
     return (
       doc.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (selectedClient === "all" || doc.clientId === selectedClient) &&
@@ -90,7 +124,7 @@ export default function DocumentsPage() {
 
   const handleDownload = async (documentId: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/documents/${documentId}/download`)
+      const response = await fetch(`${HOST_URL}/api/documents/${documentId}/download`)
       if (response.ok) {
         const data = await response.json()
         if (data.downloadUrl) {
@@ -113,7 +147,7 @@ export default function DocumentsPage() {
 
   const handleView = async (documentId: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/documents/${documentId}/download`)
+      const response = await fetch(`${HOST_URL}/api/documents/${documentId}/download`)
       if (response.ok) {
         const data = await response.json()
         if (data.downloadUrl) {

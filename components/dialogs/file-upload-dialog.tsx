@@ -20,6 +20,14 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { File, X } from "lucide-react"
+import { HOST_URL } from "@/lib/api"
+
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  // Add other fields as needed
+}
 
 interface FileUploadDialogProps {
   open: boolean
@@ -41,21 +49,26 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
     sharePointUrl: "",
   })
   const [files, setFiles] = useState<File[]>([])
-  const [clients, setClients] = useState([])
+  const [clients, setClients] = useState<Client[]>([])
   const [firms, setFirms] = useState([])
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
     if (open) {
-      fetchClients()
+      if (user?.role === "client") {
+        // Fetch the Client entity for this user
+        fetchClientForUser()
+      } else {
+        fetchClients()
+      }
       fetchFirms()
     }
   }, [open, user])
 
   const fetchClients = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/clients")
+      const response = await fetch(`${HOST_URL}/api/clients`)
       const data = await response.json()
       setClients(data)
     } catch (error) {
@@ -65,11 +78,27 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
 
   const fetchFirms = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/firms?role=${user?.role}&userId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/firms?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
       setFirms(data)
     } catch (error) {
       console.error("Error fetching firms:", error)
+    }
+  }
+
+  const fetchClientForUser = async () => {
+    try {
+      const response = await fetch(`${HOST_URL}/api/clients?role=client&userId=${user?.id}`)
+      const data = await response.json()
+      if (data.length > 0) {
+        setClients(data)
+        setFormData((prev) => ({ ...prev, clientId: data[0].id }))
+      } else {
+        // Fallback: set clientId to user.id
+        setFormData((prev) => ({ ...prev, clientId: user?.id || "" }))
+      }
+    } catch (error) {
+      setFormData((prev) => ({ ...prev, clientId: user?.id || "" }))
     }
   }
 
@@ -103,7 +132,7 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
         uploadData.append("files", file)
       })
 
-      const response = await fetch("http://localhost:5000/api/documents/upload", {
+      const response = await fetch(`${HOST_URL}/api/documents/upload`, {
         method: "POST",
         body: uploadData,
       })
@@ -227,26 +256,38 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
               />
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="client" className="text-right">
-                Client
-              </Label>
-              <Select
-                value={formData.clientId}
-                onValueChange={(value) => setFormData({ ...formData, clientId: value })}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client: any) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Client Selection */}
+            {user?.role !== "client" && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="client" className="text-right">
+                  Client
+                </Label>
+                <Select
+                  value={formData.clientId}
+                  onValueChange={(value) => setFormData({ ...formData, clientId: value })}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client: Client) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {/* If client, show their name as read-only */}
+            {user?.role === "client" && clients.length > 0 && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Client</Label>
+                <div className="col-span-3">
+                  <Input value={clients[0].name} readOnly className="bg-gray-100" />
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="firm" className="text-right">

@@ -1,7 +1,8 @@
 const https = require('https');
 const http = require('http');
+import { HOST_URL } from "./lib/api"
 
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = `${HOST_URL}/api`;
 
 function makeRequest(url, options = {}) {
   return new Promise((resolve, reject) => {

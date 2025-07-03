@@ -4,7 +4,7 @@ const DocumentSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String },
   type: { type: String, enum: ['GST Return', 'ITR', 'Bank Statement', 'Invoice', 'TDS Certificate', 'Other'], required: true },
-  clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
+  clientId: { type: mongoose.Schema.Types.ObjectId },
   firmId: { type: mongoose.Schema.Types.ObjectId, ref: 'Firm' },
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   status: { type: String, enum: ['pending', 'approved', 'rejected', 'synced'], default: 'pending' },

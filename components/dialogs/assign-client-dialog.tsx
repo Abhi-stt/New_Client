@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
+import { HOST_URL } from "@/lib/api"
 
 interface AssignClientDialogProps {
   member: any
@@ -38,7 +39,7 @@ export function AssignClientDialog({ member, open, onOpenChange, onSuccess }: As
 
   const fetchClients = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/clients")
+      const response = await fetch(`${HOST_URL}/api/clients`)
       const data = await response.json()
       setClients(data)
     } catch (error) {
@@ -59,7 +60,7 @@ export function AssignClientDialog({ member, open, onOpenChange, onSuccess }: As
     setLoading(true)
 
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${member.id}/assign-clients`, {
+      const response = await fetch(`${HOST_URL}/api/users/${member.id}/assign-clients`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clientIds: selectedClients }),

@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import { HOST_URL } from "@/lib/api"
 
 interface CreateQueryDialogProps {
   open: boolean
@@ -41,7 +42,7 @@ export function CreateQueryDialog({ open, onOpenChange, onSuccess }: CreateQuery
     setLoading(true)
 
     try {
-      const response = await fetch("http://localhost:5000/api/queries", {
+      const response = await fetch(`${HOST_URL}/api/queries`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

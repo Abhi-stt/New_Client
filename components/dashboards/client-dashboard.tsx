@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { FileText, Building, Users, Calendar, MessageSquare, Upload, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { HOST_URL } from "@/lib/api"
 
 export function ClientDashboard() {
   const { user } = useAuth()
@@ -29,7 +30,7 @@ export function ClientDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/dashboard/client?userId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/dashboard/client?userId=${user?.id}`)
       const data = await response.json()
       setStats(data.stats)
       setRecentDocuments(data.documents)

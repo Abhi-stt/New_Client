@@ -13,6 +13,7 @@ import { CreateClientDialog } from "@/components/dialogs/create-client-dialog"
 import { ClientMasterDialog } from "@/components/dialogs/client-master-dialog"
 import { Building, Plus, Search, Filter, Calendar, FileText, Users } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { HOST_URL } from "@/lib/api"
 
 export default function ClientsPage() {
   const { user } = useAuth()
@@ -34,7 +35,7 @@ export default function ClientsPage() {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/clients?role=${user?.role}&userId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/clients?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
       setClients(data)
     } catch (error) {

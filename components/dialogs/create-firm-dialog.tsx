@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import { HOST_URL } from "@/lib/api"
 
 interface CreateFirmDialogProps {
   open: boolean
@@ -45,7 +46,7 @@ export function CreateFirmDialog({ open, onOpenChange, onSuccess }: CreateFirmDi
     setLoading(true)
 
     try {
-      const response = await fetch("http://localhost:5000/api/firms", {
+      const response = await fetch(`${HOST_URL}/api/firms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

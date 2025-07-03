@@ -1,5 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
-
+export const HOST_URL = process.env.NEXT_PUBLIC_HOST_URL || 'http://localhost:5000';
+export const API_BASE_URL = `${HOST_URL}/api`;
 export const api = {
   // Auth endpoints
   login: `${API_BASE_URL}/users/login`,

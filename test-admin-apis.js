@@ -1,5 +1,7 @@
+import { HOST_URL } from "./lib/api"
+
 // Test script for admin functionality
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = `${HOST_URL}/api`;
 
 async function testAdminAPIs() {
   console.log('🧪 Testing Admin Role APIs...\n');

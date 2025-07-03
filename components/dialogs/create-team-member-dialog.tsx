@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import { HOST_URL } from "@/lib/api"
 
 interface CreateTeamMemberDialogProps {
   open: boolean
@@ -46,7 +47,7 @@ export function CreateTeamMemberDialog({ open, onOpenChange, onSuccess }: Create
 
   const fetchManagers = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/users/managers")
+      const response = await fetch(`${HOST_URL}/api/users/managers`)
       const data = await response.json()
       setManagers(data)
     } catch (error) {
@@ -67,7 +68,7 @@ export function CreateTeamMemberDialog({ open, onOpenChange, onSuccess }: Create
       }
       if (!payload.managerId) delete payload.managerId;
 
-      const response = await fetch("http://localhost:5000/api/users", {
+      const response = await fetch(`${HOST_URL}/api/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

@@ -14,6 +14,7 @@ import { AssignClientDialog } from "@/components/dialogs/assign-client-dialog"
 import { TwoFactorDialog } from "@/components/dialogs/two-factor-dialog"
 import { Users, Plus, Search, Filter, Shield, UserPlus, Settings } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { HOST_URL } from "@/lib/api"
 
 export default function TeamPage() {
   const { user } = useAuth()
@@ -36,7 +37,7 @@ export default function TeamPage() {
 
   const fetchTeamMembers = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/users/team-members?role=${user?.role}&userId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/users/team-members?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
       setTeamMembers(data)
     } catch (error) {

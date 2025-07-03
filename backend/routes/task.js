@@ -5,6 +5,8 @@ const router = express.Router();
 // Create a new task
 router.post('/', async (req, res) => {
   try {
+    // Accept clientId as either a Client _id or a User _id (for client users without a Client entity)
+    // No strict validation on clientId
     const task = new Task(req.body);
     await task.save();
     res.status(201).json(task);
@@ -21,8 +23,13 @@ router.get('/', async (req, res) => {
 
     // Role-based filtering
     if (role === 'client') {
-      // Clients can only see their own tasks (as clientId)
-      query = { clientId: userId };
+      // Clients can see their own tasks (by clientId) or those they created
+      query = {
+        $or: [
+          { clientId: userId },
+          { createdBy: userId }
+        ]
+      };
     } else if (role === 'team_member') {
       // Team members can see tasks assigned to them
       query = { assigneeId: userId };

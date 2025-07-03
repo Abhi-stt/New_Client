@@ -12,6 +12,7 @@ import { CreateTaskDialog } from "@/components/dialogs/create-task-dialog"
 import { TaskDetailsDialog } from "@/components/dialogs/task-details-dialog"
 import { CheckSquare, Plus, Calendar, User, Building, Filter, Search } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { HOST_URL } from "@/lib/api"
 
 export default function TasksPage() {
   const { user } = useAuth()
@@ -38,9 +39,42 @@ export default function TasksPage() {
     }
   }, [user])
 
+  const staticSampleTasks = [
+    {
+      id: 'static-1',
+      title: 'GST Return Filing - Q4 2024',
+      description: 'File quarterly GST return for ABC Corporation',
+      dueDate: '2024-01-25',
+      clientName: 'ABC Corporation',
+      assigneeName: 'Team Member',
+      priority: 'high',
+      status: 'pending',
+    },
+    {
+      id: 'static-2',
+      title: 'Bank Reconciliation - December 2024',
+      description: 'Reconcile bank statements for XYZ Industries',
+      dueDate: '2024-01-30',
+      clientName: 'XYZ Industries',
+      assigneeName: 'Team Member',
+      priority: 'medium',
+      status: 'in_progress',
+    },
+    {
+      id: 'static-3',
+      title: 'TDS Payment - Q3 2024',
+      description: 'Process TDS payment for DEF Solutions',
+      dueDate: '2024-01-15',
+      clientName: 'DEF Solutions',
+      assigneeName: 'Team Member',
+      priority: 'high',
+      status: 'completed',
+    },
+  ];
+
   const fetchTasks = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/tasks?role=${user?.role}&userId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/tasks?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
       setTasks(data)
     } catch (error) {
@@ -52,7 +86,7 @@ export default function TasksPage() {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/clients")
+      const response = await fetch(`${HOST_URL}/api/clients`)
       const data = await response.json()
       setClients(data)
     } catch (error) {
@@ -62,7 +96,7 @@ export default function TasksPage() {
 
   const fetchTeamMembers = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/users/team-members")
+      const response = await fetch(`${HOST_URL}/api/users/team-members`)
       const data = await response.json()
       setTeamMembers(data)
     } catch (error) {
@@ -70,7 +104,7 @@ export default function TasksPage() {
     }
   }
 
-  const filteredTasks = tasks.filter((task: any) => {
+  const filteredTasks = (tasks.length === 0 ? staticSampleTasks : tasks).filter((task: any) => {
     return (
       task.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (selectedClient === "all" || task.clientId === selectedClient) &&
@@ -82,7 +116,7 @@ export default function TasksPage() {
 
   const updateTaskStatus = async (taskId: string, status: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/tasks/${taskId}/status`, {
+      const response = await fetch(`${HOST_URL}/api/tasks/${taskId}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),

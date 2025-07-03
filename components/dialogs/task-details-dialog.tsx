@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { Calendar, User, Building, Clock, MessageSquare } from "lucide-react"
+import { HOST_URL } from "@/lib/api"
 
 interface TaskDetailsDialogProps {
   task: any
@@ -35,7 +36,7 @@ export function TaskDetailsDialog({ task, open, onOpenChange, onSuccess }: TaskD
   const handleStatusUpdate = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`http://localhost:5000/api/tasks/${task.id}/status`, {
+      const response = await fetch(`${HOST_URL}/api/tasks/${task.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -57,7 +58,7 @@ export function TaskDetailsDialog({ task, open, onOpenChange, onSuccess }: TaskD
 
     setLoading(true)
     try {
-      const response = await fetch(`http://localhost:5000/api/tasks/${task.id}/comments`, {
+      const response = await fetch(`${HOST_URL}/api/tasks/${task.id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ comment, userId: user?.id }),

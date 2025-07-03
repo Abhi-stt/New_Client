@@ -19,6 +19,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
+import { HOST_URL } from "@/lib/api"
+
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  // Add other fields as needed
+}
 
 interface CreateTaskDialogProps {
   open: boolean
@@ -39,14 +47,18 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
     recurrenceType: "",
     recurrenceInterval: 1,
   })
-  const [clients, setClients] = useState([])
+  const [clients, setClients] = useState<Client[]>([])
   const [teamMembers, setTeamMembers] = useState([])
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
     if (open) {
-      fetchClients()
+      if (user?.role === "client") {
+        fetchClientForUser()
+      } else {
+        fetchClients()
+      }
       if (user?.role === "admin" || user?.role === "manager") {
         fetchTeamMembers()
       }
@@ -55,7 +67,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
 
   const fetchClients = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/clients")
+      const response = await fetch(`${HOST_URL}/api/clients`)
       const data = await response.json()
       setClients(data)
     } catch (error) {
@@ -65,7 +77,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
 
   const fetchTeamMembers = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/users/team-members")
+      const response = await fetch(`${HOST_URL}/api/users/team-members`)
       const data = await response.json()
       setTeamMembers(data)
     } catch (error) {
@@ -73,17 +85,49 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
     }
   }
 
+  const fetchClientForUser = async () => {
+    try {
+      const response = await fetch(`${HOST_URL}/api/clients?role=client&userId=${user?.id}`)
+      const data = await response.json()
+      if (data.length > 0) {
+        setClients(data)
+        setFormData((prev) => ({ ...prev, clientId: data[0].id }))
+      } else {
+        // Fallback: set clientId to user.id
+        setFormData((prev) => ({ ...prev, clientId: user?.id || "" }))
+      }
+    } catch (error) {
+      setFormData((prev) => ({ ...prev, clientId: user?.id || "" }))
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
+    // Ensure clientId is set for client users
+    let submitFormData = { ...formData }
+    if (user?.role === "client") {
+      // Only set clientId if user.id is a valid ObjectId
+      if (/^[a-fA-F0-9]{24}$/.test(user?.id || "")) {
+        submitFormData.clientId = user.id
+      } else {
+        submitFormData.clientId = ""
+      }
+    }
+    // Ensure dueDate is set
+    if (!submitFormData.dueDate) {
+      submitFormData.dueDate = new Date().toISOString().slice(0, 10)
+    }
+    console.log("Submitting task formData:", submitFormData)
+
     try {
       // Create task
-      const taskResponse = await fetch("http://localhost:5000/api/tasks", {
+      const taskResponse = await fetch(`${HOST_URL}/api/tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          ...submitFormData,
           createdBy: user?.id,
         }),
       })
@@ -91,20 +135,20 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
       if (taskResponse.ok) {
         // Also create a calendar event for this task
         const eventData = {
-          title: formData.title,
-          description: formData.description,
-          date: formData.dueDate,
-          priority: formData.priority,
-          clientId: formData.clientId,
-          assigneeId: formData.assigneeId,
+          title: submitFormData.title,
+          description: submitFormData.description,
+          date: submitFormData.dueDate,
+          priority: submitFormData.priority,
+          clientId: submitFormData.clientId,
+          assigneeId: submitFormData.assigneeId,
           type: 'task',
           createdBy: user?.id,
-          isRecurring: formData.isRecurring,
-          recurrenceType: formData.recurrenceType,
-          recurrenceInterval: formData.recurrenceInterval,
+          isRecurring: submitFormData.isRecurring,
+          recurrenceType: submitFormData.recurrenceType,
+          recurrenceInterval: submitFormData.recurrenceInterval,
         }
 
-        await fetch("http://localhost:5000/api/calendar-events", {
+        await fetch(`${HOST_URL}/api/calendar-events`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(eventData),
@@ -182,26 +226,38 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
               />
             </div>
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="client" className="text-right">
-                Client
-              </Label>
-              <Select
-                value={formData.clientId}
-                onValueChange={(value) => setFormData({ ...formData, clientId: value })}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map((client: any) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Client Selection */}
+            {user?.role !== "client" && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="client" className="text-right">
+                  Client
+                </Label>
+                <Select
+                  value={formData.clientId}
+                  onValueChange={(value) => setFormData({ ...formData, clientId: value })}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients.map((client: any) => (
+                      <SelectItem key={client.id} value={client.id}>
+                        {client.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {/* If client, show their name as read-only */}
+            {user?.role === "client" && clients.length > 0 && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Client</Label>
+                <div className="col-span-3">
+                  <Input value={clients[0].name} readOnly className="bg-gray-100" />
+                </div>
+              </div>
+            )}
 
             {(user?.role === "admin" || user?.role === "manager") && (
               <div className="grid grid-cols-4 items-center gap-4">

@@ -36,8 +36,13 @@ router.get('/', async (req, res) => {
 
     // Role-based filtering
     if (role === 'client') {
-      // Clients can only see their own documents
-      query = { clientId: userId };
+      // Clients can see their own documents (by clientId) or those they uploaded
+      query = {
+        $or: [
+          { clientId: userId },
+          { uploadedBy: userId }
+        ]
+      };
     } else if (role === 'team_member') {
       // Team members can see documents of clients assigned to them
       // This would need to be implemented based on your data structure
@@ -118,11 +123,13 @@ router.post('/upload', upload.array('files'), async (req, res) => {
       uploadedAt: new Date()
     }));
 
+    // Accept clientId as either a Client _id or a User _id (for client users without a Client entity)
+    // No strict validation on clientId
     const document = new Document({
       name,
       description,
       type,
-      clientId,
+      clientId, // can be a Client or User _id
       firmId,
       syncWithGoogleSheets,
       syncWithSharePoint,

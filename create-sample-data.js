@@ -6,9 +6,10 @@ const Task = require('./backend/schemas/Task');
 const Query = require('./backend/schemas/Query');
 const Document = require('./backend/schemas/Document');
 const CalendarEvent = require('./backend/schemas/CalendarEvent');
+require('dotenv').config();
 
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/client-portal', { 
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/client-portal', { 
   useNewUrlParser: true, 
   useUnifiedTopology: true 
 });

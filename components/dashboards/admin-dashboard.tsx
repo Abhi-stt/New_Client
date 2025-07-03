@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { Users, FileText, CheckSquare, Calendar, Building, MessageSquare } from "lucide-react"
 import { CreateManagerDialog } from "@/components/dialogs/create-manager-dialog"
 import { DocumentRequestDialog } from "@/components/dialogs/document-request-dialog"
+import { HOST_URL } from "@/lib/api"
 
 export function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -29,7 +30,7 @@ export function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/dashboard/admin?userId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/dashboard/admin?userId=${user?.id}`)
       const data = await response.json()
       setStats(data.stats)
       setRecentActivities(data.recentActivity)

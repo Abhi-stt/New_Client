@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Building, Users, FileText, Calendar } from "lucide-react"
+import { HOST_URL } from "@/lib/api"
 
 interface FirmDetailsDialogProps {
   firm: any
@@ -38,7 +39,7 @@ export function FirmDetailsDialog({ firm, open, onOpenChange, onSuccess }: FirmD
 
   const fetchFirmDetails = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/firms/${firm.id}/details`)
+      const response = await fetch(`${HOST_URL}/api/firms/${firm.id}/details`)
       const data = await response.json()
       setFirmData(data)
     } catch (error) {

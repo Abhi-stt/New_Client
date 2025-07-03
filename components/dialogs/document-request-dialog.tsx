@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
+import { HOST_URL } from "@/lib/api"
 
 interface DocumentRequestDialogProps {
   open: boolean
@@ -47,7 +48,7 @@ export function DocumentRequestDialog({ open, onOpenChange, onSuccess }: Documen
 
   const fetchClients = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/clients")
+      const response = await fetch(`${HOST_URL}/api/clients`)
       const data = await response.json()
       setClients(data)
     } catch (error) {
@@ -60,7 +61,7 @@ export function DocumentRequestDialog({ open, onOpenChange, onSuccess }: Documen
     setLoading(true)
 
     try {
-      const response = await fetch("http://localhost:5000/api/documents/request", {
+      const response = await fetch(`${HOST_URL}/api/documents/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

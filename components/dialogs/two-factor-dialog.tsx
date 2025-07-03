@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
+import { HOST_URL } from "@/lib/api"
 
 interface TwoFactorDialogProps {
   member: any
@@ -34,7 +35,7 @@ export function TwoFactorDialog({ member, open, onOpenChange, onSuccess }: TwoFa
     setLoading(true)
 
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${member.id}/2fa`, {
+      const response = await fetch(`${HOST_URL}/api/users/${member.id}/2fa`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

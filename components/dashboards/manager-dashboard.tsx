@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Users, FileText, CheckSquare, Calendar, Building } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { HOST_URL } from "@/lib/api"
 
 export function ManagerDashboard() {
   const { user } = useAuth()
@@ -27,7 +28,7 @@ export function ManagerDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/dashboard/manager?userId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/dashboard/manager?userId=${user?.id}`)
       const data = await response.json()
       setStats(data.stats)
       setTeamActivities(data.teamPerformance)

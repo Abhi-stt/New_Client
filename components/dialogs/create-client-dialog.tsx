@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
+import { HOST_URL } from "@/lib/api"
 
 interface CreateClientDialogProps {
   open: boolean
@@ -43,7 +44,7 @@ export function CreateClientDialog({ open, onOpenChange, onSuccess }: CreateClie
     setLoading(true)
 
     try {
-      const response = await fetch("http://localhost:5000/api/clients", {
+      const response = await fetch(`${HOST_URL}/api/clients`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

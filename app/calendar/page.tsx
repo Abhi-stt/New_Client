@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CustomCalendar } from "@/components/custom-calendar"
 import { CreateTaskDialog } from "@/components/dialogs/create-task-dialog"
 import { Plus, Filter } from "lucide-react"
+import { HOST_URL } from "@/lib/api"
 
 export default function CalendarPage() {
   const { user } = useAuth()
@@ -28,7 +29,7 @@ export default function CalendarPage() {
 
   const fetchTasks = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/tasks?role=${user?.role}&userId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/tasks?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
       setTasks(data)
     } catch (error) {
@@ -40,7 +41,7 @@ export default function CalendarPage() {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/clients")
+      const response = await fetch(`${HOST_URL}/api/clients`)
       const data = await response.json()
       setClients(data)
     } catch (error) {

@@ -1,6 +1,7 @@
 const fetch = require('node-fetch');
+import { HOST_URL } from "./lib/api"
 
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = `${HOST_URL}/api`;
 
 // Test data
 const testUser = {
