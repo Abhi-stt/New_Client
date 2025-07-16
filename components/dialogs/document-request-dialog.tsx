@@ -29,14 +29,15 @@ interface DocumentRequestDialogProps {
 export function DocumentRequestDialog({ open, onOpenChange, onSuccess }: DocumentRequestDialogProps) {
   const [formData, setFormData] = useState({
     clientId: "",
-    documentName: "",
+    name: "",
+    type: "Other",
     description: "",
     dueDate: "",
     priority: "medium",
     sendEmail: true,
     sendWhatsApp: true,
   })
-  const [clients, setClients] = useState([])
+  const [clients, setClients] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
@@ -60,11 +61,16 @@ export function DocumentRequestDialog({ open, onOpenChange, onSuccess }: Documen
     e.preventDefault()
     setLoading(true)
 
+    // Find the selected client's email
+    const selectedClient = clients.find((c: any) => c.id === formData.clientId);
+    const clientEmail = selectedClient ? selectedClient.email : "";
+    const payload = { ...formData, clientEmail };
+
     try {
       const response = await fetch(`${HOST_URL}/api/documents/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       if (response.ok) {
@@ -76,7 +82,8 @@ export function DocumentRequestDialog({ open, onOpenChange, onSuccess }: Documen
         onOpenChange(false)
         setFormData({
           clientId: "",
-          documentName: "",
+          name: "",
+          type: "Other",
           description: "",
           dueDate: "",
           priority: "medium",
@@ -133,17 +140,38 @@ export function DocumentRequestDialog({ open, onOpenChange, onSuccess }: Documen
             </div>
 
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="documentName" className="text-right">
-                Document
+              <Label htmlFor="name" className="text-right">
+                Document Name
               </Label>
               <Input
-                id="documentName"
-                value={formData.documentName}
-                onChange={(e) => setFormData({ ...formData, documentName: e.target.value })}
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="col-span-3"
                 placeholder="e.g., Bank Statement, GST Return"
                 required
               />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="type" className="text-right">
+                Type
+              </Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => setFormData({ ...formData, type: value })}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GST Return">GST Return</SelectItem>
+                  <SelectItem value="ITR">ITR</SelectItem>
+                  <SelectItem value="Bank Statement">Bank Statement</SelectItem>
+                  <SelectItem value="Invoice">Invoice</SelectItem>
+                  <SelectItem value="TDS Certificate">TDS Certificate</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-4 items-center gap-4">

@@ -29,10 +29,10 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
     
-    // Check 2FA if enabled
-    if (user.twoFactorEnabled && !twoFactorCode) {
-      return res.status(401).json({ error: '2FA code required' });
-    }
+    // REMOVE 2FA check here so login does not require 2FA
+    // if (user.twoFactorEnabled && !twoFactorCode) {
+    //   return res.status(401).json({ error: '2FA code required' });
+    // }
     
     // Return user data (without password)
     const userResponse = {
@@ -168,11 +168,23 @@ router.get('/managers', async (req, res) => {
   }
 });
 
-// Get user by ID
+// Get own profile (with 2FA code)
 router.get('/:id', async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json(user);
+  try {
+    // TODO: In production, check authentication: req.user.id === req.params.id
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      twoFactorEnabled: user.twoFactorEnabled,
+      twoFactorCode: user.twoFactorCode, // Only for self!
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Update user
@@ -192,15 +204,43 @@ router.delete('/:id', async (req, res) => {
 // Enable/disable 2FA
 router.post('/:id/2fa', async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-    
-    user.twoFactorEnabled = req.body.action === 'enable';
-    if (req.body.code) {
-      user.twoFactorCode = req.body.code;
+    const actorId = req.headers['x-user-id'] || req.body.actorId;
+    const actorRole = req.headers['x-user-role'] || req.body.actorRole;
+    const targetUser = await User.findById(req.params.id);
+    if (!targetUser) return res.status(404).json({ error: 'User not found' });
+
+    // Admin can do anything
+    if (actorRole === 'admin') {
+      // allow enable, disable, reset
+    } else if (actorRole === 'manager') {
+      // Only allow reset for team members
+      if (req.body.action !== 'reset' || targetUser.role !== 'team_member') {
+        return res.status(403).json({ error: 'Managers can only reset 2FA for team members.' });
+      }
+    } else {
+      return res.status(403).json({ error: 'Not authorized.' });
     }
-    
-    await user.save();
+
+    if (req.body.action === 'enable') {
+      targetUser.twoFactorEnabled = true;
+      if (req.body.code) {
+        targetUser.twoFactorCode = req.body.code;
+      }
+    } else if (req.body.action === 'disable') {
+      targetUser.twoFactorEnabled = false;
+      targetUser.twoFactorCode = undefined;
+      targetUser.twoFactorFailedAttempts = 0;
+      targetUser.twoFactorLockedUntil = null;
+    } else if (req.body.action === 'reset') {
+      if (req.body.code) {
+        targetUser.twoFactorCode = req.body.code;
+        targetUser.twoFactorFailedAttempts = 0;
+        targetUser.twoFactorLockedUntil = null;
+      } else {
+        return res.status(400).json({ error: 'Reset requires a new code.' });
+      }
+    }
+    await targetUser.save();
     res.json({ message: `2FA ${req.body.action}d successfully` });
   } catch (err) {
     res.status(400).json({ error: err.message });

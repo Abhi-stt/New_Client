@@ -29,28 +29,14 @@ export default function LoginPage() {
     setLoading(true)
     setError("")
 
-    const success = await login(email, password, twoFactorCode)
-
-    if (success) {
+    const result = await login(email, password, show2FA ? twoFactorCode : undefined)
+    if (result === true) {
       router.push("/dashboard")
+    } else if (result === "2fa-required") {
+      setShow2FA(true)
+      setError("Please enter your 2FA code")
     } else {
-      if (!show2FA && email && password) {
-        // Check if 2FA is required
-        const response = await fetch(`${HOST_URL}/api/users/check-2fa`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        })
-        const data = await response.json()
-        if (data.requires2FA) {
-          setShow2FA(true)
-          setError("Please enter your 2FA code")
-        } else {
-          setError("Invalid credentials")
-        }
-      } else {
-        setError("Invalid credentials or 2FA code")
-      }
+      setError(show2FA ? "Invalid credentials or 2FA code" : "Invalid credentials")
     }
     setLoading(false)
   }

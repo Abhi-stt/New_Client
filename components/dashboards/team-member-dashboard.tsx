@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress"
 import { FileText, CheckSquare, Clock, AlertTriangle, Calendar, Upload } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { HOST_URL } from "@/lib/api"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function TeamMemberDashboard() {
   const { user } = useAuth()
@@ -22,10 +23,16 @@ export function TeamMemberDashboard() {
 
   const [myTasks, setMyTasks] = useState([])
   const [recentDocuments, setRecentDocuments] = useState([])
+  const [profile, setProfile] = useState<any>(null)
 
   useEffect(() => {
     fetchDashboardData()
-  }, [])
+    if (user?.id) {
+      fetch(`${HOST_URL}/api/users/${user.id}`)
+        .then(res => res.json())
+        .then(setProfile)
+    }
+  }, [user])
 
   const fetchDashboardData = async () => {
     try {
@@ -41,6 +48,15 @@ export function TeamMemberDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* 2FA Code Card */}
+      {profile?.twoFactorEnabled && (
+        <Alert variant="default">
+          <AlertDescription>
+            <span className="font-semibold">Your 2FA Code:</span> <span className="font-mono text-lg">{profile.twoFactorCode}</span><br/>
+            <span className="text-xs text-gray-500">This code is set by the admin. If it changes, use the new code for confidential document access.</span>
+          </AlertDescription>
+        </Alert>
+      )}
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>

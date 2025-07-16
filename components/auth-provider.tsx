@@ -20,7 +20,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string, twoFactorCode?: string) => Promise<boolean>
+  login: (email: string, password: string, twoFactorCode?: string) => Promise<boolean | '2fa-required'>
   logout: () => void
   loading: boolean
 }
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false)
   }, [])
 
-  const login = async (email: string, password: string, twoFactorCode?: string): Promise<boolean> => {
+  const login = async (email: string, password: string, twoFactorCode?: string): Promise<boolean | '2fa-required'> => {
     try {
       const response = await fetch(`${HOST_URL}/api/users/login`, {
         method: "POST",
@@ -54,6 +54,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData.user)
         localStorage.setItem("user", JSON.stringify(userData.user))
         return true
+      } else if (response.status === 401) {
+        const error = await response.json()
+        if (error.error === '2FA code required') {
+          // Prompt for 2FA code (UI logic to be handled in the login form)
+          return '2fa-required';
+        }
       }
       return false
     } catch (error) {

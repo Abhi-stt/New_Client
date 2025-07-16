@@ -10,10 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { DocumentRequestDialog } from "@/components/dialogs/document-request-dialog"
 import { FileUploadDialog } from "@/components/dialogs/file-upload-dialog"
-import { FileText, Upload, Download, Eye, Filter, Search } from "lucide-react"
+import { FileText, Upload, Download, Eye, Filter, Search, Lock, Unlock } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import dynamic from "next/dynamic"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useRef } from "react"
 import { HOST_URL } from "@/lib/api"
 
@@ -38,6 +38,63 @@ export default function DocumentsPage() {
 
   const [docxPreviewHtml, setDocxPreviewHtml] = useState<string | null>(null)
   const [showDocxModal, setShowDocxModal] = useState(false)
+  const [show2FAModal, setShow2FAModal] = useState(false)
+  const [pendingDocId, setPendingDocId] = useState<string | null>(null)
+  const [pendingAction, setPendingAction] = useState<'download' | 'view' | null>(null)
+  const [twoFACode, setTwoFACode] = useState("")
+  const [showSyncDialog, setShowSyncDialog] = useState(false)
+  const [syncDoc, setSyncDoc] = useState<any>(null)
+  const [syncFields, setSyncFields] = useState({
+    syncWithGoogleSheets: false,
+    googleSheetsUrl: "",
+    syncWithSharePoint: false,
+    sharePointUrl: ""
+  })
+  const [syncLoading, setSyncLoading] = useState(false)
+
+  const openSyncDialog = (doc: any) => {
+    setSyncDoc(doc)
+    setSyncFields({
+      syncWithGoogleSheets: doc.syncWithGoogleSheets || false,
+      googleSheetsUrl: doc.googleSheetsUrl || "",
+      syncWithSharePoint: doc.syncWithSharePoint || false,
+      sharePointUrl: doc.sharePointUrl || ""
+    })
+    setShowSyncDialog(true)
+  }
+
+  const handleLinkSync = async () => {
+    if (!syncDoc) return
+    setSyncLoading(true)
+    try {
+      await fetch(`${HOST_URL}/api/documents/${syncDoc.id}/link-sync`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(syncFields)
+      })
+      setShowSyncDialog(false)
+      fetchDocuments()
+      toast({ title: "Sync settings updated" })
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update sync settings", variant: "destructive" })
+    } finally {
+      setSyncLoading(false)
+    }
+  }
+
+  const handleManualSync = async () => {
+    if (!syncDoc) return
+    setSyncLoading(true)
+    try {
+      await fetch(`${HOST_URL}/api/documents/${syncDoc.id}/sync`, { method: "POST" })
+      fetchDocuments()
+      toast({ title: "Manual sync triggered" })
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to sync document", variant: "destructive" })
+    } finally {
+      setSyncLoading(false)
+    }
+  }
 
   useEffect(() => {
     fetchDocuments()
@@ -122,9 +179,15 @@ export default function DocumentsPage() {
     )
   })
 
-  const handleDownload = async (documentId: string) => {
+  const handleDownload = async (documentId: string, code?: string) => {
     try {
-      const response = await fetch(`${HOST_URL}/api/documents/${documentId}/download`)
+      const headers: any = {
+        'x-user-id': user?.id || '',
+        'x-user-role': user?.role || '',
+      }
+      if (code) headers['x-2fa-code'] = code
+
+      const response = await fetch(`${HOST_URL}/api/documents/${documentId}/download`, { headers })
       if (response.ok) {
         const data = await response.json()
         if (data.downloadUrl) {
@@ -139,35 +202,59 @@ export default function DocumentsPage() {
         } else {
           toast({ title: "Error", description: "No download URL found", variant: "destructive" })
         }
+      } else {
+        const error = await response.json()
+        if (
+          (response.status === 401 || response.status === 403) &&
+          error.error &&
+          error.error.toLowerCase().includes("2fa")
+        ) {
+          setPendingDocId(documentId)
+          setPendingAction('download')
+          setShow2FAModal(true)
+          toast({ title: "2FA Required", description: "Please enter your 2FA code to access this document." })
+        } else {
+          toast({ title: "Error", description: error.error || "Failed to download document", variant: "destructive" })
+        }
       }
     } catch (error) {
       toast({ title: "Error", description: "Failed to download document", variant: "destructive" })
     }
   }
 
-  const handleView = async (documentId: string) => {
+  const handleView = async (documentId: string, code?: string) => {
     try {
-      const response = await fetch(`${HOST_URL}/api/documents/${documentId}/download`)
+      const headers: any = {
+        'x-user-id': user?.id || '',
+        'x-user-role': user?.role || '',
+      }
+      if (code) headers['x-2fa-code'] = code
+
+      const response = await fetch(`${HOST_URL}/api/documents/${documentId}/download`, { headers })
       if (response.ok) {
         const data = await response.json()
         if (data.downloadUrl) {
           const fileUrl = backendBase + data.downloadUrl
           const ext = fileUrl.split('.').pop()?.toLowerCase()
-          if (ext === 'pdf' || ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'gif') {
+          if (['pdf', 'jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) {
             window.open(fileUrl, '_blank')
           } else if (ext === 'docx') {
-            // DOCX preview with mammoth
-            const fileRes = await fetch(fileUrl)
-            const blob = await fileRes.blob()
-            const mammoth = await import('mammoth')
-            const arrayBuffer = await blob.arrayBuffer()
-            const result = await mammoth.convertToHtml({ arrayBuffer })
-            setDocxPreviewHtml(result.value)
+            setDocxPreviewHtml(null)
             setShowDocxModal(true)
+            try {
+              const fileRes = await fetch(fileUrl)
+              const blob = await fileRes.blob()
+              const mammoth = await import('mammoth')
+              const arrayBuffer = await blob.arrayBuffer()
+              const result = await mammoth.convertToHtml({ arrayBuffer })
+              setDocxPreviewHtml(result.value)
+            } catch (err) {
+              setDocxPreviewHtml('<div style="color:red">Failed to preview DOCX file.</div>')
+            }
           } else if (["doc", "xls", "xlsx", "ppt", "pptx"].includes(ext || '')) {
             window.open(`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fileUrl)}`, '_blank')
           } else {
-            // fallback: download
+            toast({ title: "Preview not available", description: "This file type cannot be previewed. Downloading instead.", variant: "destructive" })
             const link = document.createElement('a')
             link.href = fileUrl
             link.download = ''
@@ -178,9 +265,37 @@ export default function DocumentsPage() {
         } else {
           toast({ title: "Error", description: "No viewable file found", variant: "destructive" })
         }
+      } else {
+        const error = await response.json()
+        if (
+          (response.status === 401 || response.status === 403) &&
+          error.error &&
+          error.error.toLowerCase().includes("2fa")
+        ) {
+          setPendingDocId(documentId)
+          setPendingAction('view')
+          setShow2FAModal(true)
+          toast({ title: "2FA Required", description: "Please enter your 2FA code to access this document." })
+        } else {
+          toast({ title: "Error", description: error.error || "Failed to view document", variant: "destructive" })
+        }
       }
     } catch (error) {
       toast({ title: "Error", description: "Failed to view document", variant: "destructive" })
+    }
+  }
+
+  const markConfidential = async (documentId: string, confidential: boolean) => {
+    try {
+      await fetch(`${HOST_URL}/api/documents/${documentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confidential }),
+      })
+      fetchDocuments()
+      toast({ title: confidential ? "Marked as Confidential" : "Confidentiality Removed" })
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update confidentiality", variant: "destructive" })
     }
   }
 
@@ -354,7 +469,32 @@ export default function DocumentsPage() {
                       >
                         {document.status}
                       </Badge>
-                      {document.syncStatus && <Badge variant="outline">{document.syncStatus}</Badge>}
+                      {document.syncStatus && (
+                        <Badge variant={
+                          document.syncStatus === "synced" ? "default" :
+                          document.syncStatus === "pending" ? "secondary" :
+                          document.syncStatus === "error" ? "destructive" : "outline"
+                        }>
+                          {document.syncStatus.charAt(0).toUpperCase() + document.syncStatus.slice(1)}
+                        </Badge>
+                      )}
+                      {document.lastSyncedAt && (
+                        <span className="text-xs text-gray-500 ml-2">Last sync: {new Date(document.lastSyncedAt).toLocaleString()}</span>
+                      )}
+                      {user?.role === "admin" && (
+                        <Button
+                          size="sm"
+                          variant={document.confidential ? "destructive" : "outline"}
+                          onClick={() => markConfidential(document.id, !document.confidential)}
+                          title={document.confidential ? "Remove Confidentiality" : "Mark as Confidential"}
+                        >
+                          {document.confidential ? <Lock className="mr-2 h-4 w-4" /> : <Unlock className="mr-2 h-4 w-4" />}
+                          {document.confidential ? "Confidential" : "Make Confidential"}
+                        </Button>
+                      )}
+                      {document.confidential && (
+                        <Badge variant="destructive"><Lock className="inline h-3 w-3 mr-1" /> Confidential</Badge>
+                      )}
                       <Button size="sm" variant="outline" onClick={() => handleView(document.id)}>
                         <Eye className="mr-2 h-4 w-4" />
                         View
@@ -363,6 +503,11 @@ export default function DocumentsPage() {
                         <Download className="mr-2 h-4 w-4" />
                         Download
                       </Button>
+                      {(user?.role === "admin" || user?.role === "manager") && (
+                        <Button size="sm" variant="outline" onClick={() => openSyncDialog(document)}>
+                          Sync
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -410,9 +555,99 @@ export default function DocumentsPage() {
             <DialogHeader>
               <DialogTitle>DOCX Preview</DialogTitle>
             </DialogHeader>
-            <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: docxPreviewHtml || '' }} />
+            <div className="prose prose-sm max-w-none">
+              {docxPreviewHtml === null ? (
+                <div className="text-center text-gray-500">Loading preview...</div>
+              ) : (
+                <div dangerouslySetInnerHTML={{ __html: docxPreviewHtml || '' }} />
+              )}
+            </div>
           </DialogContent>
         </Dialog>
+
+        {/* 2FA Modal */}
+        {show2FAModal && (
+          <Dialog open={show2FAModal} onOpenChange={setShow2FAModal}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>2FA Verification</DialogTitle>
+              </DialogHeader>
+              <Input
+                placeholder="Enter 2FA code"
+                value={twoFACode}
+                onChange={e => setTwoFACode(e.target.value)}
+                maxLength={6}
+              />
+              <DialogFooter>
+                <Button
+                  onClick={async () => {
+                    if (pendingDocId && pendingAction) {
+                      if (pendingAction === 'download') {
+                        await handleDownload(pendingDocId, twoFACode)
+                      } else {
+                        await handleView(pendingDocId, twoFACode)
+                      }
+                      setShow2FAModal(false)
+                      setTwoFACode("")
+                      setPendingDocId(null)
+                      setPendingAction(null)
+                    }
+                  }}
+                >
+                  Verify & Continue
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {showSyncDialog && syncDoc && (
+          <Dialog open={showSyncDialog} onOpenChange={setShowSyncDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Sync Settings for {syncDoc.name}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="flex items-center space-x-2">
+                    <input type="checkbox" checked={syncFields.syncWithGoogleSheets} onChange={e => setSyncFields(f => ({ ...f, syncWithGoogleSheets: e.target.checked }))} />
+                    <span>Sync with Google Sheets</span>
+                  </label>
+                  {syncFields.syncWithGoogleSheets && (
+                    <Input
+                      className="mt-2"
+                      placeholder="Google Sheets URL"
+                      value={syncFields.googleSheetsUrl}
+                      onChange={e => setSyncFields(f => ({ ...f, googleSheetsUrl: e.target.value }))}
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="flex items-center space-x-2">
+                    <input type="checkbox" checked={syncFields.syncWithSharePoint} onChange={e => setSyncFields(f => ({ ...f, syncWithSharePoint: e.target.checked }))} />
+                    <span>Sync with SharePoint</span>
+                  </label>
+                  {syncFields.syncWithSharePoint && (
+                    <Input
+                      className="mt-2"
+                      placeholder="SharePoint Folder URL"
+                      value={syncFields.sharePointUrl}
+                      onChange={e => setSyncFields(f => ({ ...f, sharePointUrl: e.target.value }))}
+                    />
+                  )}
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleLinkSync} disabled={syncLoading}>
+                  {syncLoading ? "Saving..." : "Save Sync Settings"}
+                </Button>
+                <Button onClick={handleManualSync} variant="outline" disabled={syncLoading}>
+                  {syncLoading ? "Syncing..." : "Sync Now"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     </DashboardLayout>
   )

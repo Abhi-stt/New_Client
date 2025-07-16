@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { HOST_URL } from "@/lib/api"
+import { useAuth } from "@/components/auth-provider"
 
 interface TwoFactorDialogProps {
   member: any
@@ -25,10 +26,17 @@ interface TwoFactorDialogProps {
 }
 
 export function TwoFactorDialog({ member, open, onOpenChange, onSuccess }: TwoFactorDialogProps) {
+  const { user } = useAuth()
   const [action, setAction] = useState<"enable" | "disable" | "reset">("enable")
   const [newCode, setNewCode] = useState("")
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
+
+  // Permission logic
+  const isAdmin = user?.role === "admin"
+  const isManager = user?.role === "manager"
+  const canEnableDisable = isAdmin
+  const canReset = isAdmin || (isManager && member?.role === "team_member")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,8 +44,12 @@ export function TwoFactorDialog({ member, open, onOpenChange, onSuccess }: TwoFa
 
     try {
       const response = await fetch(`${HOST_URL}/api/users/${member.id}/2fa`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user?.id || "",
+          "x-user-role": user?.role || "",
+        },
         body: JSON.stringify({
           action,
           code: newCode,
@@ -96,42 +108,48 @@ export function TwoFactorDialog({ member, open, onOpenChange, onSuccess }: TwoFa
             <div className="space-y-2">
               <Label>Action:</Label>
               <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="enable"
-                    name="action"
-                    value="enable"
-                    checked={action === "enable"}
-                    onChange={(e) => setAction(e.target.value as "enable")}
-                    disabled={member?.twoFactorEnabled}
-                  />
-                  <Label htmlFor="enable">Enable 2FA</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="disable"
-                    name="action"
-                    value="disable"
-                    checked={action === "disable"}
-                    onChange={(e) => setAction(e.target.value as "disable")}
-                    disabled={!member?.twoFactorEnabled}
-                  />
-                  <Label htmlFor="disable">Disable 2FA</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    id="reset"
-                    name="action"
-                    value="reset"
-                    checked={action === "reset"}
-                    onChange={(e) => setAction(e.target.value as "reset")}
-                    disabled={!member?.twoFactorEnabled}
-                  />
-                  <Label htmlFor="reset">Reset 2FA Code</Label>
-                </div>
+                {canEnableDisable && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="enable"
+                      name="action"
+                      value="enable"
+                      checked={action === "enable"}
+                      onChange={(e) => setAction(e.target.value as "enable")}
+                      disabled={member?.twoFactorEnabled}
+                    />
+                    <Label htmlFor="enable">Enable 2FA</Label>
+                  </div>
+                )}
+                {canEnableDisable && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="disable"
+                      name="action"
+                      value="disable"
+                      checked={action === "disable"}
+                      onChange={(e) => setAction(e.target.value as "disable")}
+                      disabled={!member?.twoFactorEnabled}
+                    />
+                    <Label htmlFor="disable">Disable 2FA</Label>
+                  </div>
+                )}
+                {canReset && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="reset"
+                      name="action"
+                      value="reset"
+                      checked={action === "reset"}
+                      onChange={(e) => setAction(e.target.value as "reset")}
+                      disabled={!member?.twoFactorEnabled}
+                    />
+                    <Label htmlFor="reset">Reset 2FA Code</Label>
+                  </div>
+                )}
               </div>
             </div>
 

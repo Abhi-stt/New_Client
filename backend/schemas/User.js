@@ -10,6 +10,9 @@ const UserSchema = new mongoose.Schema({
   firmIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Firm' }],
   phone: { type: String },
   twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorCode: { type: String },
+  twoFactorFailedAttempts: { type: Number, default: 0 },
+  twoFactorLockedUntil: { type: Date, default: null },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);  

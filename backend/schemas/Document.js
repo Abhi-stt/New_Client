@@ -12,6 +12,8 @@ const DocumentSchema = new mongoose.Schema({
   syncWithSharePoint: { type: Boolean, default: false },
   googleSheetsUrl: { type: String },
   sharePointUrl: { type: String },
+  syncStatus: { type: String, enum: ['pending', 'synced', 'error', 'offline'], default: 'pending' },
+  lastSyncedAt: { type: Date },
   files: [{
     filename: String,
     url: String,
@@ -19,6 +21,15 @@ const DocumentSchema = new mongoose.Schema({
     mimetype: String,
     uploadedAt: { type: Date, default: Date.now }
   }],
+  // Notification and secure upload fields
+  uploadLinkToken: { type: String },
+  uploadLinkExpiresAt: { type: Date },
+  uploadLinkUsed: { type: Boolean, default: false },
+  reminderCount: { type: Number, default: 0 },
+  reminderLimit: { type: Number, default: 3 },
+  dueDate: { type: Date },
+  clientEmail: { type: String },
+  confidential: { type: Boolean, default: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Document', DocumentSchema); 

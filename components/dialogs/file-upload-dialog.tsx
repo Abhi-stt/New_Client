@@ -121,6 +121,7 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
 
       // Append form data
       Object.entries(formData).forEach(([key, value]) => {
+        if (key === 'firmId' && !value) return; // Skip empty firmId
         uploadData.append(key, value.toString())
       })
 
