@@ -14,13 +14,25 @@ let googleTokens = null;
 let microsoftTokens = null;
 
 const app = express();
+
+const allowedOrigins = [
+  'https://new-client-kohl.vercel.app',
+  'http://localhost:3000'
+];
+
 app.use(cors({
-  origin: [
-    'https://new-client-kohl.vercel.app', // your deployed frontend
-    'http://localhost:3000' // for local dev
-  ],
-  credentials: true // if you use cookies or auth headers
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
 }));
+
 app.use(express.json());
 
 // Import routes
