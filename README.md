@@ -38,7 +38,7 @@ cd client-portal (2)
 #### Backend
 ```bash
 cd backend
-npm install
+  npm install
 ```
 #### Frontend
 ```bash
