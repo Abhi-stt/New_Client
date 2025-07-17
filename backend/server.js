@@ -14,7 +14,13 @@ let googleTokens = null;
 let microsoftTokens = null;
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://new-client-kohl.vercel.app', // your deployed frontend
+    'http://localhost:3000' // for local dev
+  ],
+  credentials: true // if you use cookies or auth headers
+}));
 app.use(express.json());
 
 // Import routes
