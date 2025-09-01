@@ -4,7 +4,7 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   name: { type: String, required: true },
-  role: { type: String, enum: ['admin', 'manager', 'team_member', 'client'], required: true },
+  role: { type: String, enum: ['super_admin', 'admin', 'manager', 'team_member', 'client'], required: true },
   managerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   clientIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Client' }],
   firmIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Firm' }],
@@ -13,6 +13,9 @@ const UserSchema = new mongoose.Schema({
   twoFactorCode: { type: String },
   twoFactorFailedAttempts: { type: Number, default: 0 },
   twoFactorLockedUntil: { type: Date, default: null },
+  isActive: { type: Boolean, default: true },
+  lastLoginAt: { type: Date },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);  

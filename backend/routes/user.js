@@ -1,5 +1,6 @@
 const express = require('express');
 const User = require('../schemas/User');
+const UserActivity = require('../schemas/UserActivity');
 const router = express.Router();
 
 // Register a new user
@@ -34,6 +35,19 @@ router.post('/login', async (req, res) => {
     //   return res.status(401).json({ error: '2FA code required' });
     // }
     
+    // Update last login time
+    user.lastLoginAt = new Date();
+    await user.save();
+    
+    // Log login activity
+    await new UserActivity({
+      userId: user._id,
+      action: 'login',
+      description: `User logged in successfully`,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    }).save();
+    
     // Return user data (without password)
     const userResponse = {
       id: user._id,
@@ -57,6 +71,14 @@ router.post('/login', async (req, res) => {
 router.post('/create-demo-users', async (req, res) => {
   try {
     const demoUsers = [
+      {
+        email: 'superadmin@demo.com',
+        password: 'superadmin123',
+        name: 'Super Admin User',
+        role: 'super_admin',
+        phone: '+91-9876543209',
+        twoFactorEnabled: false,
+      },
       {
         email: 'admin@demo.com',
         password: 'admin123',

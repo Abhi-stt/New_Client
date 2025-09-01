@@ -4,6 +4,7 @@ import { useAuth } from "@/components/auth-provider"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { SuperAdminDashboard } from "@/components/dashboards/super-admin-dashboard"
 import { AdminDashboard } from "@/components/dashboards/admin-dashboard"
 import { ManagerDashboard } from "@/components/dashboards/manager-dashboard"
 import { TeamMemberDashboard } from "@/components/dashboards/team-member-dashboard"
@@ -29,6 +30,8 @@ export default function DashboardPage() {
 
   const renderDashboard = () => {
     switch (user.role) {
+      case "super_admin":
+        return <SuperAdminDashboard />
       case "admin":
         return <AdminDashboard />
       case "manager":
