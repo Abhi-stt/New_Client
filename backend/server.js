@@ -17,16 +17,32 @@ const app = express();
 
 const allowedOrigins = [
   'https://new-client-kohl.vercel.app',
-  'http://localhost:3000'
-];
+  'http://localhost:3000',
+  'https://localhost:3000',
+  // Add your deployment domains here
+  process.env.FRONTEND_URL,
+  process.env.NEXT_PUBLIC_HOST_URL
+].filter(Boolean); // Remove undefined values
 
 const corsOptions = {
   origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
+    
+    // Allow localhost in development
+    if (origin.includes('localhost')) return callback(null, true);
+    
+    // Check if origin is in allowed list
     if (allowedOrigins.indexOf(origin) !== -1) {
       return callback(null, true);
-    } else {
+    }
+    
+    // For production, you might want to be more restrictive
+    if (process.env.NODE_ENV === 'production') {
       return callback(new Error('Not allowed by CORS'));
+    } else {
+      // In development, allow all origins
+      return callback(null, true);
     }
   },
   credentials: true

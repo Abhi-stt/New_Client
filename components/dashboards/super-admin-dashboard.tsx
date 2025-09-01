@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Users, Activity, UserPlus, Eye, Edit, Trash2, Search, Filter, Calendar } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
-import { HOST_URL } from "@/lib/api"
+import { api } from "@/lib/api"
 
 interface User {
   _id: string
@@ -86,13 +86,13 @@ export function SuperAdminDashboard() {
       setLoading(true)
       
       // Fetch dashboard stats
-      const statsResponse = await fetch(`${HOST_URL}/api/super-admin/dashboard-stats?userId=${user?.id}`)
+      const statsResponse = await fetch(`${api.superAdminDashboardStats}?userId=${user?.id}`)
       const statsData = await statsResponse.json()
       setStats(statsData.stats)
       setActivities(statsData.recentActivities || [])
 
       // Fetch all users
-      const usersResponse = await fetch(`${HOST_URL}/api/super-admin/users?userId=${user?.id}`)
+      const usersResponse = await fetch(`${api.superAdminUsers}?userId=${user?.id}`)
       const usersData = await usersResponse.json()
       setUsers(usersData)
     } catch (error) {
@@ -110,7 +110,7 @@ export function SuperAdminDashboard() {
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const response = await fetch(`${HOST_URL}/api/super-admin/users?userId=${user?.id}`, {
+      const response = await fetch(`${api.superAdminCreateUser}?userId=${user?.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newUser)
@@ -145,7 +145,7 @@ export function SuperAdminDashboard() {
     if (!confirm("Are you sure you want to delete this user?")) return
 
     try {
-      const response = await fetch(`${HOST_URL}/api/super-admin/users/${userId}?userId=${user?.id}`, {
+      const response = await fetch(`${api.superAdminDeleteUser(userId)}?userId=${user?.id}`, {
         method: "DELETE"
       })
 

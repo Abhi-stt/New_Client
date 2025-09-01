@@ -44,6 +44,15 @@ export const api = {
   dashboardManager: `${API_BASE_URL}/dashboard/manager`,
   dashboardTeamMember: `${API_BASE_URL}/dashboard/team-member`,
   
+  // Super Admin endpoints
+  superAdminUsers: `${API_BASE_URL}/super-admin/users`,
+  superAdminActivities: `${API_BASE_URL}/super-admin/activities`,
+  superAdminDashboardStats: `${API_BASE_URL}/super-admin/dashboard-stats`,
+  superAdminUserDetails: (id: string) => `${API_BASE_URL}/super-admin/users/${id}/details`,
+  superAdminCreateUser: `${API_BASE_URL}/super-admin/users`,
+  superAdminUpdateUser: (id: string) => `${API_BASE_URL}/super-admin/users/${id}`,
+  superAdminDeleteUser: (id: string) => `${API_BASE_URL}/super-admin/users/${id}`,
+  
   // Calendar endpoints
   calendarEvents: `${API_BASE_URL}/calendar-events`,
 };
