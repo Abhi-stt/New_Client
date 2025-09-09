@@ -1,11 +1,20 @@
 const express = require('express');
 const Firm = require('../schemas/Firm');
+const { getUserAdminId, buildAccessFilter, setOwnershipFields } = require('../utils/accessControl');
 const router = express.Router();
 
 // Create a new firm
 router.post('/', async (req, res) => {
   try {
-    const firm = new Firm(req.body);
+    const { role, userId } = req.query;
+    const userAdminId = await getUserAdminId(userId);
+    const ownershipFields = setOwnershipFields(role, userId, userAdminId);
+    
+    const firm = new Firm({
+      ...req.body,
+      ...ownershipFields
+    });
+    
     await firm.save();
     res.status(201).json({
       ...firm.toObject(),
@@ -20,25 +29,20 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { clientId, role, userId } = req.query;
-    let query = {};
+    
+    // Get current user's admin domain
+    const userAdminId = await getUserAdminId(userId);
+    
+    // Build base access filter for admin domain isolation
+    const baseAccessFilter = buildAccessFilter(role, userId, userAdminId);
+    
+    let query = { ...baseAccessFilter };
 
-    // Role-based filtering
+    // Additional filtering
     if (clientId) {
-      // If clientId is provided, filter by that
-      query = { clientId };
-    } else if (role === 'client') {
-      // Clients can only see their own firms
-      query = { clientId: userId };
-    } else if (role === 'team_member') {
-      // Team members can see firms of clients assigned to them
-      // This would need to be implemented based on your data structure
-      query = {};
-    } else if (role === 'manager') {
-      // Managers can see firms of clients assigned to them
-      // This would need to be implemented based on your data structure
-      query = {};
+      // If specific clientId is provided, filter by that
+      query.clientId = clientId;
     }
-    // Admin can see all firms (no filter)
 
     const firms = await Firm.find(query);
     res.json(firms.map(firm => ({

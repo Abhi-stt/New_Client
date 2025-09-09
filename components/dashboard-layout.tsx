@@ -57,7 +57,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         ...baseItems,
         { name: "Team Management", href: "/team", icon: Users },
         { name: "Client Management", href: "/clients", icon: Building },
-        { name: "Settings", href: "/settings", icon: Settings },
       ]
     }
 
@@ -214,7 +213,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">
           <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">{children}</div>
+            <div className="w-full px-4 sm:px-6 lg:px-8">{children}</div>
           </div>
         </main>
       </div>

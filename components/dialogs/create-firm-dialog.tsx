@@ -46,7 +46,7 @@ export function CreateFirmDialog({ open, onOpenChange, onSuccess }: CreateFirmDi
     setLoading(true)
 
     try {
-      const response = await fetch(`${HOST_URL}/api/firms`, {
+      const response = await fetch(`${HOST_URL}/api/firms?role=${user?.role}&userId=${user?.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

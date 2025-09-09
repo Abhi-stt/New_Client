@@ -11,6 +11,9 @@ const FirmSchema = new mongoose.Schema({
   incorporationDate: { type: String },
   clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
   status: { type: String, enum: ['active', 'inactive', 'pending'], default: 'active' },
+  // Admin domain isolation
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Firm', FirmSchema); 

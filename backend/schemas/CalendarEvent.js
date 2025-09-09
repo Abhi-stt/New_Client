@@ -13,6 +13,7 @@ const CalendarEventSchema = new mongoose.Schema({
   recurrenceType: { type: String, enum: ['daily', 'weekly', 'monthly', 'yearly'] },
   recurrenceInterval: { type: Number, default: 1 },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Which admin domain this event belongs to
 }, { timestamps: true });
 
 module.exports = mongoose.model('CalendarEvent', CalendarEventSchema); 

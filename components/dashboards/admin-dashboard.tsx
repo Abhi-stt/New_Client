@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -9,8 +10,11 @@ import { Users, FileText, CheckSquare, Calendar, Building, MessageSquare } from 
 import { CreateManagerDialog } from "@/components/dialogs/create-manager-dialog"
 import { DocumentRequestDialog } from "@/components/dialogs/document-request-dialog"
 import { HOST_URL } from "@/lib/api"
+import { useAuth } from "@/components/auth-provider"
 
 export function AdminDashboard() {
+  const { user } = useAuth()
+  const router = useRouter()
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalClients: 0,
@@ -25,12 +29,16 @@ export function AdminDashboard() {
   const [showDocumentRequest, setShowDocumentRequest] = useState(false)
 
   useEffect(() => {
-    fetchDashboardData()
-  }, [])
+    if (user?.id) {
+      fetchDashboardData()
+    }
+  }, [user])
 
   const fetchDashboardData = async () => {
+    if (!user?.id) return
+    
     try {
-      const response = await fetch(`${HOST_URL}/api/dashboard/admin?userId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/dashboard/admin?userId=${user.id}`)
       const data = await response.json()
       setStats(data.stats)
       setRecentActivities(data.recentActivity)
@@ -48,6 +56,10 @@ export function AdminDashboard() {
           <p className="text-gray-600">Manage your CA firm operations</p>
         </div>
         <div className="flex space-x-2">
+          <Button onClick={() => window.location.href = '/tasks'}>
+            <CheckSquare className="mr-2 h-4 w-4" />
+            Manage Tasks
+          </Button>
           <Button onClick={() => setShowCreateManager(true)}>
             <Users className="mr-2 h-4 w-4" />
             Create Manager
@@ -130,21 +142,37 @@ export function AdminDashboard() {
             <CardDescription>Common administrative tasks</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button variant="outline" className="w-full justify-start bg-transparent">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              onClick={() => router.push('/team')}
+            >
               <Users className="mr-2 h-4 w-4" />
               Manage Team Members
             </Button>
-            <Button variant="outline" className="w-full justify-start bg-transparent">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              onClick={() => router.push('/clients')}
+            >
               <Building className="mr-2 h-4 w-4" />
-              Client Assignment
+              Client Management
             </Button>
-            <Button variant="outline" className="w-full justify-start bg-transparent">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              onClick={() => router.push('/queries')}
+            >
               <MessageSquare className="mr-2 h-4 w-4" />
               View Queries
             </Button>
-            <Button variant="outline" className="w-full justify-start bg-transparent">
-              <Calendar className="mr-2 h-4 w-4" />
-              Schedule Tasks
+            <Button 
+              variant="outline" 
+              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              onClick={() => router.push('/tasks')}
+            >
+              <CheckSquare className="mr-2 h-4 w-4" />
+              Manage Tasks
             </Button>
           </CardContent>
         </Card>

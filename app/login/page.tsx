@@ -128,20 +128,12 @@ export default function LoginPage() {
             <CardTitle className="text-sm">Demo Credentials</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-2">
-              {demoCredentials.map((cred) => (
-                <Button
-                  key={cred.role}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fillDemo(cred.email, cred.password)}
-                  className="text-xs"
-                >
-                  {cred.role}
-                </Button>
-              ))}
+            <div className="space-y-2 text-sm">
+              <div><strong>Admin:</strong> admin@demo.com / admin123</div>
+              <div><strong>Manager:</strong> manager@demo.com / manager123</div>
+              <div><strong>Team Member:</strong> team@demo.com / team123</div>
+              <div><strong>Client:</strong> client@demo.com / client123</div>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Click any role to auto-fill credentials</p>
           </CardContent>
         </Card>
       </div>

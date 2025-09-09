@@ -35,17 +35,34 @@ export default function ClientsPage() {
 
   const fetchClients = async () => {
     try {
+      console.log(`Fetching clients for ${user?.role} with ID ${user?.id}`)
       const response = await fetch(`${HOST_URL}/api/clients?role=${user?.role}&userId=${user?.id}`)
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
       const data = await response.json()
-      setClients(data)
+      console.log('Clients API response:', data)
+      
+      // Ensure data is an array
+      if (Array.isArray(data)) {
+        setClients(data)
+      } else if (data && Array.isArray(data.clients)) {
+        setClients(data.clients)
+      } else {
+        console.error('Unexpected API response format:', data)
+        setClients([])
+      }
     } catch (error) {
       console.error("Error fetching clients:", error)
+      setClients([]) // Set empty array on error
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredClients = clients.filter((client: any) => {
+  const filteredClients = (Array.isArray(clients) ? clients : []).filter((client: any) => {
     return (
       client.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (selectedStatus === "all" || client.status === selectedStatus) &&
@@ -53,11 +70,21 @@ export default function ClientsPage() {
     )
   })
 
-  const canManageClients = user?.role === "admin" || user?.role === "manager"
+  const canManageClients = user?.role === "admin"
 
   const handleClientMaster = (client: any) => {
     setSelectedClient(client)
     setShowMasterDialog(true)
+  }
+
+  const handleViewDocuments = (client: any) => {
+    // Navigate to documents page with client filter
+    window.location.href = `/documents?clientId=${client.id}`
+  }
+
+  const handleViewTeam = (client: any) => {
+    // Navigate to team page with client filter
+    window.location.href = `/team?clientId=${client.id}`
   }
 
   if (loading) {
@@ -79,8 +106,15 @@ export default function ClientsPage() {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
-            <p className="text-gray-600">Manage clients and their compliance requirements</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              {user?.role === 'manager' ? 'My Clients' : 'Client Management'}
+            </h1>
+            <p className="text-gray-600">
+              {user?.role === 'manager' 
+                ? `Clients assigned to you by admin • ${Array.isArray(clients) ? clients.length : 0} client${(Array.isArray(clients) ? clients.length : 0) !== 1 ? 's' : ''}`
+                : 'Manage clients and their compliance requirements'
+              }
+            </p>
           </div>
           {canManageClients && (
             <Button onClick={() => setShowCreateDialog(true)}>
@@ -199,11 +233,11 @@ export default function ClientsPage() {
                       <Calendar className="mr-2 h-4 w-4" />
                       Master
                     </Button>
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={() => handleViewDocuments(client)}>
                       <FileText className="mr-2 h-4 w-4" />
                       Documents
                     </Button>
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={() => handleViewTeam(client)}>
                       <Users className="mr-2 h-4 w-4" />
                       Team
                     </Button>
@@ -216,11 +250,15 @@ export default function ClientsPage() {
               <Card>
                 <CardContent className="p-12 text-center">
                   <Building className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No clients found</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {user?.role === 'manager' ? "No clients assigned to you" : "No clients found"}
+                  </h3>
                   <p className="text-gray-600 mb-4">
                     {searchTerm || selectedStatus !== "all" || selectedType !== "all"
                       ? "No clients match your current filters."
-                      : "No clients have been added yet."}
+                      : user?.role === 'manager' 
+                        ? "You don't have any clients assigned to you yet. Ask your admin to assign clients to you to see them here."
+                        : "No clients have been added yet."}
                   </p>
                   {canManageClients && (
                     <Button onClick={() => setShowCreateDialog(true)}>

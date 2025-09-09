@@ -102,6 +102,15 @@ export default function DocumentsPage() {
     if (user?.role === "client") {
       fetchFirms()
     }
+    
+    // Handle URL parameters for client filtering
+    const urlParams = new URLSearchParams(window.location.search)
+    const clientId = urlParams.get('clientId')
+    if (clientId) {
+      setSelectedClient(clientId)
+      // Set page title to indicate client-specific view
+      document.title = `Documents - Client View`
+    }
   }, [user])
 
   const staticSampleDocuments = [
@@ -141,9 +150,17 @@ export default function DocumentsPage() {
     try {
       const response = await fetch(`${HOST_URL}/api/documents?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
-      setDocuments(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setDocuments(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setDocuments([])
+      }
     } catch (error) {
       console.error("Error fetching documents:", error)
+      setDocuments([]) // Set empty array on error
     } finally {
       setLoading(false)
     }
@@ -151,33 +168,55 @@ export default function DocumentsPage() {
 
   const fetchClients = async () => {
     try {
-      const response = await fetch(`${HOST_URL}/api/clients`)
+      const response = await fetch(`${HOST_URL}/api/clients?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
-      setClients(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setClients(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setClients([])
+      }
     } catch (error) {
       console.error("Error fetching clients:", error)
+      setClients([]) // Set empty array on error
     }
   }
 
   const fetchFirms = async () => {
     try {
-      const response = await fetch(`${HOST_URL}/api/firms?clientId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/firms?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
-      setFirms(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setFirms(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setFirms([])
+      }
     } catch (error) {
       console.error("Error fetching firms:", error)
+      setFirms([]) // Set empty array on error
     }
   }
 
-  const filteredDocuments = (documents.length === 0 ? staticSampleDocuments : documents).filter((doc: any) => {
-    return (
-      doc.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (selectedClient === "all" || doc.clientId === selectedClient) &&
-      (selectedFirm === "all" || doc.firmId === selectedFirm) &&
-      (selectedType === "all" || doc.type === selectedType) &&
-      (selectedStatus === "all" || doc.status === selectedStatus)
-    )
-  })
+  const filteredDocuments = (() => {
+    // Ensure we have an array to work with
+    const documentsArray = Array.isArray(documents) ? documents : [];
+    const dataToFilter = documentsArray.length === 0 ? staticSampleDocuments : documentsArray;
+    
+    return dataToFilter.filter((doc: any) => {
+      return (
+        doc.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        (selectedClient === "all" || doc.clientId === selectedClient) &&
+        (selectedFirm === "all" || doc.firmId === selectedFirm) &&
+        (selectedType === "all" || doc.type === selectedType) &&
+        (selectedStatus === "all" || doc.status === selectedStatus)
+      )
+    })
+  })()
 
   const handleDownload = async (documentId: string, code?: string) => {
     try {
@@ -367,11 +406,11 @@ export default function DocumentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Clients</SelectItem>
-                    {clients.map((client: any) => (
+                    {Array.isArray(clients) ? clients.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
                       </SelectItem>
-                    ))}
+                    )) : []}
                   </SelectContent>
                 </Select>
               )}

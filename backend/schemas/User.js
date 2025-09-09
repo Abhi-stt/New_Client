@@ -5,6 +5,7 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   name: { type: String, required: true },
   role: { type: String, enum: ['super_admin', 'admin', 'manager', 'team_member', 'client'], required: true },
+  status: { type: String, enum: ['active', 'inactive', 'pending', 'suspended'], default: 'active' },
   managerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   clientIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Client' }],
   firmIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Firm' }],
@@ -16,6 +17,7 @@ const UserSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   lastLoginAt: { type: Date },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Which admin domain this user belongs to
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);  

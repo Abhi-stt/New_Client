@@ -9,6 +9,13 @@ export const api = {
   clients: `${API_BASE_URL}/clients`,
   clientCompliance: (id: string) => `${API_BASE_URL}/clients/${id}/compliance`,
   
+  // Compliance endpoints
+  compliance: `${API_BASE_URL}/compliance`,
+  complianceByClient: (clientId: string) => `${API_BASE_URL}/compliance/client/${clientId}`,
+  complianceSummary: (clientId: string) => `${API_BASE_URL}/compliance/summary/client/${clientId}`,
+  complianceOverdue: (clientId: string) => `${API_BASE_URL}/compliance/overdue/client/${clientId}`,
+  complianceUpcoming: (clientId: string) => `${API_BASE_URL}/compliance/upcoming/client/${clientId}`,
+  
   // Firm endpoints
   firms: `${API_BASE_URL}/firms`,
   firmDetails: (id: string) => `${API_BASE_URL}/firms/${id}/details`,
@@ -16,7 +23,20 @@ export const api = {
   // Task endpoints
   tasks: `${API_BASE_URL}/tasks`,
   taskStatus: (id: string) => `${API_BASE_URL}/tasks/${id}/status`,
+  taskReassign: (id: string) => `${API_BASE_URL}/tasks/${id}/reassign`,
+  taskProgressUpdate: (id: string) => `${API_BASE_URL}/tasks/${id}/progress`,
+  taskProgressHistory: (id: string) => `${API_BASE_URL}/tasks/${id}/progress-history`,
+  taskProgressSummary: `${API_BASE_URL}/tasks/progress-summary`,
   taskComments: (id: string) => `${API_BASE_URL}/tasks/${id}/comments`,
+  taskFromService: (serviceId: string) => `${API_BASE_URL}/tasks/from-service/${serviceId}`,
+  tasksByService: (serviceId: string) => `${API_BASE_URL}/tasks/service/${serviceId}`,
+  assignableUsers: `${API_BASE_URL}/tasks/users/assignable`,
+  
+  // Service endpoints
+  services: `${API_BASE_URL}/services`,
+  serviceDetails: (id: string) => `${API_BASE_URL}/services/${id}`,
+  serviceTemplates: `${API_BASE_URL}/services/templates/categories`,
+  createTasksFromService: (id: string) => `${API_BASE_URL}/services/${id}/create-tasks`,
   
   // Query endpoints
   queries: `${API_BASE_URL}/queries`,

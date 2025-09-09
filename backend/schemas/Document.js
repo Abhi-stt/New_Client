@@ -30,6 +30,8 @@ const DocumentSchema = new mongoose.Schema({
   dueDate: { type: Date },
   clientEmail: { type: String },
   confidential: { type: Boolean, default: false },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Who created this document
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Which admin domain this document belongs to
 }, { timestamps: true });
 
 module.exports = mongoose.model('Document', DocumentSchema); 

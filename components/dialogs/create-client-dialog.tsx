@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/auth-provider"
 import { HOST_URL } from "@/lib/api"
 
 interface CreateClientDialogProps {
@@ -26,28 +27,55 @@ interface CreateClientDialogProps {
 }
 
 export function CreateClientDialog({ open, onOpenChange, onSuccess }: CreateClientDialogProps) {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     address: "",
     type: "",
+    status: "active",
     registrationNumber: "",
     panNumber: "",
     gstNumber: "",
+    managerId: "none",
   })
   const [loading, setLoading] = useState(false)
+  const [managers, setManagers] = useState([])
   const { toast } = useToast()
+
+  // Fetch managers for assignment (only for admin)
+  useEffect(() => {
+    if (open && user?.role === 'admin') {
+      fetchManagers()
+    }
+  }, [open, user])
+
+  const fetchManagers = async () => {
+    try {
+      const response = await fetch(`${HOST_URL}/api/users/managers?role=${user?.role}&userId=${user?.id}`)
+      const data = await response.json()
+      setManagers(data)
+    } catch (error) {
+      console.error("Error fetching managers:", error)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const response = await fetch(`${HOST_URL}/api/clients`, {
+      // Prepare data for submission - convert "none" to undefined for managerId
+      const submitData = {
+        ...formData,
+        managerId: formData.managerId === "none" ? undefined : formData.managerId
+      }
+      
+      const response = await fetch(`${HOST_URL}/api/clients?role=${user?.role}&userId=${user?.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       })
 
       if (response.ok) {
@@ -63,9 +91,11 @@ export function CreateClientDialog({ open, onOpenChange, onSuccess }: CreateClie
           phone: "",
           address: "",
           type: "",
+          status: "active",
           registrationNumber: "",
           panNumber: "",
           gstNumber: "",
+          managerId: "none",
         })
       } else {
         const error = await response.json()
@@ -147,6 +177,42 @@ export function CreateClientDialog({ open, onOpenChange, onSuccess }: CreateClie
                 </SelectContent>
               </Select>
             </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="status" className="text-right">
+                Status
+              </Label>
+              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {user?.role === 'admin' && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="managerId" className="text-right">
+                  Assign Manager
+                </Label>
+                <Select value={formData.managerId} onValueChange={(value) => setFormData({ ...formData, managerId: value })}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select manager (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Manager</SelectItem>
+                    {managers.map((manager: any) => (
+                      <SelectItem key={manager._id} value={manager._id}>
+                        {manager.name} ({manager.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="address" className="text-right">
                 Address

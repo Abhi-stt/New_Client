@@ -1,31 +1,19 @@
 const express = require('express');
 const User = require('../schemas/User');
 const UserActivity = require('../schemas/UserActivity');
+const { validateUser, sanitizeInput, requireSuperAdmin } = require('../middleware/validation');
+const { checkEmailUnique } = require('../utils/validations');
 const router = express.Router();
 
-// Middleware to check if user is super admin
-const requireSuperAdmin = async (req, res, next) => {
-  try {
-    const { userId } = req.query;
-    if (!userId) {
-      return res.status(401).json({ error: 'User ID required' });
-    }
-    
-    const user = await User.findById(userId);
-    if (!user || user.role !== 'super_admin') {
-      return res.status(403).json({ error: 'Super admin access required' });
-    }
-    
-    next();
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
+// All routes require super admin access
+router.use(requireSuperAdmin);
 
 // Get all users (super admin only)
-router.get('/users', requireSuperAdmin, async (req, res) => {
+router.get('/users', async (req, res) => {
   try {
-    const users = await User.find({}).select('-password -twoFactorCode');
+    const users = await User.find({})
+      .select('-password -twoFactorCode')
+      .sort({ createdAt: -1 }); // Sort by creation date, newest first
     res.json(users);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -33,15 +21,29 @@ router.get('/users', requireSuperAdmin, async (req, res) => {
 });
 
 // Create a new user (super admin only)
-router.post('/users', requireSuperAdmin, async (req, res) => {
+router.post('/users', sanitizeInput, validateUser, async (req, res) => {
   try {
     const { name, email, password, role, phone, managerId, clientIds, firmIds } = req.body;
     const { userId: createdBy } = req.query;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ error: 'User with this email already exists' });
+    // Check if email is unique across users and clients
+    const emailCheck = await checkEmailUnique(email);
+    if (!emailCheck.isValid) {
+      return res.status(400).json({ error: emailCheck.error });
+    }
+
+    // Role hierarchy validation
+    const roleHierarchy = {
+      super_admin: ['admin', 'manager', 'team_member', 'client'],
+      admin: ['manager', 'team_member', 'client'],
+      manager: ['team_member', 'client'],
+      team_member: [],
+      client: []
+    };
+
+    const currentUser = await User.findById(createdBy);
+    if (currentUser && !roleHierarchy[currentUser.role]?.includes(role)) {
+      return res.status(403).json({ error: `You cannot create users with ${role} role` });
     }
 
     const newUser = new User({
@@ -73,7 +75,7 @@ router.post('/users', requireSuperAdmin, async (req, res) => {
 });
 
 // Update user (super admin only)
-router.put('/users/:userId', requireSuperAdmin, async (req, res) => {
+router.put('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { userId: updatedBy } = req.query;
@@ -109,7 +111,7 @@ router.put('/users/:userId', requireSuperAdmin, async (req, res) => {
 });
 
 // Delete user (super admin only)
-router.delete('/users/:userId', requireSuperAdmin, async (req, res) => {
+router.delete('/users/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { userId: deletedBy } = req.query;
@@ -124,25 +126,34 @@ router.delete('/users/:userId', requireSuperAdmin, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Soft delete - just mark as inactive
-    await User.findByIdAndUpdate(userId, { isActive: false });
+    // Check if user has any dependencies (clients, tasks, etc.)
+    const hasClients = await User.findOne({ managerId: userId });
+    if (hasClients) {
+      return res.status(400).json({ 
+        error: 'Cannot delete user. This user is managing other users. Please reassign them first.' 
+      });
+    }
+
+    // Actually delete the user from database
+    await User.findByIdAndDelete(userId);
 
     // Log the activity
     await new UserActivity({
       userId: deletedBy,
       action: 'delete_user',
-      description: `Deleted user: ${user.name} (${user.email})`,
+      description: `Permanently deleted user: ${user.name} (${user.email})`,
       metadata: { deletedUserId: userId, userRole: user.role }
     }).save();
 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
+    console.error('Delete user error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Get user activities (super admin only)
-router.get('/activities', requireSuperAdmin, async (req, res) => {
+router.get('/activities', async (req, res) => {
   try {
     const { page = 1, limit = 50, userId, action, startDate, endDate } = req.query;
     
@@ -177,7 +188,7 @@ router.get('/activities', requireSuperAdmin, async (req, res) => {
 });
 
 // Get dashboard stats for super admin
-router.get('/dashboard-stats', requireSuperAdmin, async (req, res) => {
+router.get('/dashboard-stats', async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
     const activeUsers = await User.countDocuments({ isActive: true });
@@ -219,7 +230,7 @@ router.get('/dashboard-stats', requireSuperAdmin, async (req, res) => {
 });
 
 // Get user details with activities
-router.get('/users/:userId/details', requireSuperAdmin, async (req, res) => {
+router.get('/users/:userId/details', async (req, res) => {
   try {
     const { userId } = req.params;
     

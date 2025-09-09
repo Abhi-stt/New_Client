@@ -36,15 +36,22 @@ export default function QueriesPage() {
     try {
       const response = await fetch(`${HOST_URL}/api/queries?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
-      setQueries(data)
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setQueries(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setQueries([])
+      }
     } catch (error) {
       console.error("Error fetching queries:", error)
+      setQueries([]) // Set empty array on error
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredQueries = queries.filter((query: any) => {
+  const filteredQueries = (Array.isArray(queries) ? queries : []).filter((query: any) => {
     return (
       query.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (selectedCategory === "all" || query.category === selectedCategory) &&

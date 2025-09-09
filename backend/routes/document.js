@@ -4,6 +4,7 @@ const Document = require('../schemas/Document');
 const router = express.Router();
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const { getUserAdminId, buildAccessFilter, setOwnershipFields } = require('../utils/accessControl');
 require('dotenv').config();
 
 // Configure Multer storage (this stores files in 'uploads/' folder)
@@ -90,11 +91,25 @@ router.post('/', async (req, res) => {
 // Get all documents (no role-based filtering for testing)
 router.get('/', async (req, res) => {
   try {
-    // For testing, ignore role and userId, return all documents
-    const documents = await Document.find({})
+    const { role, userId } = req.query;
+    
+    // Get current user for access control
+    const currentUser = req.user || { role: role || 'guest', id: userId || null };
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
+    
+    // Build access filter for admin domain isolation
+    const accessFilter = buildAccessFilter(currentUser.role, currentUser.id, userAdminId);
+    
+    const documents = await Document.find(accessFilter)
       .populate('clientId', 'name')
       .populate('firmId', 'name')
-      .populate('uploadedBy', 'name');
+      .populate('uploadedBy', 'name')
+      .sort({ createdAt: -1 }); // Sort by most recent first
+      
     res.json(documents.map(doc => ({
       ...doc.toObject(),
       id: doc._id,
@@ -148,6 +163,14 @@ router.delete('/:id', async (req, res) => {
 router.post('/upload', upload.array('files'), async (req, res) => {
   try {
     const { name, description, type, clientId, firmId, syncWithGoogleSheets, syncWithSharePoint, googleSheetsUrl, sharePointUrl, userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required for document upload' });
+    }
+    
+    // Get admin domain for the uploader
+    const userAdminId = await getUserAdminId(userId);
+    
     const files = req.files.map(file => ({
       filename: file.filename,
       url: `/uploads/${file.filename}`,
@@ -155,6 +178,9 @@ router.post('/upload', upload.array('files'), async (req, res) => {
       mimetype: file.mimetype,
       uploadedAt: new Date()
     }));
+
+    // Set ownership fields for data isolation
+    const ownershipFields = setOwnershipFields('admin', userId, userAdminId);
 
     // Accept clientId as either a Client _id or a User _id (for client users without a Client entity)
     // No strict validation on clientId
@@ -170,14 +196,17 @@ router.post('/upload', upload.array('files'), async (req, res) => {
       sharePointUrl,
       files,
       uploadedBy: userId,
-      status: 'pending'
+      status: 'pending',
+      ...ownershipFields
     });
+    
     await document.save();
     res.status(201).json({
       ...document.toObject(),
       id: document._id,
     });
   } catch (err) {
+    console.error('Document upload error:', err);
     res.status(400).json({ error: err.message });
   }
 });

@@ -1,6 +1,9 @@
 const express = require('express');
 const User = require('../schemas/User');
 const UserActivity = require('../schemas/UserActivity');
+const { validateUser, sanitizeInput, requireAdmin } = require('../middleware/validation');
+const { checkEmailUnique } = require('../utils/validations');
+const { getUserAdminId, buildAccessFilter, setOwnershipFields } = require('../utils/accessControl');
 const router = express.Router();
 
 // Register a new user
@@ -146,15 +149,60 @@ router.post('/check-2fa', async (req, res) => {
 
 // Get all users
 router.get('/', async (req, res) => {
-  const users = await User.find();
-  res.json(users);
+  try {
+    // Get user from middleware (assuming auth middleware sets req.user)
+    const currentUser = req.user || { role: 'guest', id: null };
+    
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
+    const accessFilter = buildAccessFilter(currentUser.role, currentUser.id, userAdminId);
+    
+    const users = await User.find(accessFilter);
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// Create a new user
-router.post('/', async (req, res) => {
+// Create a new user (team member)
+router.post('/', sanitizeInput, validateUser, async (req, res) => {
   try {
-    const user = new User(req.body);
+    const { name, email, password, role, phone, managerId } = req.body;
+    
+    // Get current user for ownership (from middleware or query params)
+    const { role: queryRole, userId: queryUserId } = req.query;
+    const currentUser = req.user || { role: queryRole || 'guest', id: queryUserId || null };
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
+
+    // Check if email is unique
+    const emailCheck = await checkEmailUnique(email);
+    if (!emailCheck.isValid) {
+      return res.status(400).json({ error: emailCheck.error });
+    }
+
+    // Set ownership fields
+    const ownershipFields = setOwnershipFields(currentUser.role, currentUser.id, userAdminId);
+
+    const user = new User({
+      name,
+      email,
+      password,
+      role,
+      phone,
+      managerId,
+      status: 'active',
+      ...ownershipFields
+    });
+    
     await user.save();
+    
     res.status(201).json({
       ...user.toObject(),
       id: user._id,
@@ -167,8 +215,98 @@ router.post('/', async (req, res) => {
 // Get team members
 router.get('/team-members', async (req, res) => {
   try {
-    const teamMembers = await User.find({ role: { $in: ['team_member', 'manager'] } });
+    const { managerId, role, userId } = req.query;
+    
+    // Get current user for access control
+    const currentUser = req.user || { role: role || 'guest', id: userId || null };
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
+    
+    let query = {};
+    let populateOptions = [
+      { path: 'managerId', select: 'name email' },
+      { path: 'clientIds', select: 'name' }
+    ];
+    
+    // Build base access filter for admin domain isolation
+    const baseAccessFilter = buildAccessFilter(currentUser.role, currentUser.id, userAdminId);
+    
+    if (managerId) {
+      // Get team members for a specific manager
+      query = { 
+        ...baseAccessFilter,
+        managerId: managerId,
+        role: 'team_member' 
+      };
+    } else if (role === 'manager' && userId) {
+      // For managers, get their own team members
+      query = { 
+        ...baseAccessFilter,
+        managerId: userId,
+        status: 'active',
+        role: 'team_member'
+      };
+    } else if (role === 'admin') {
+      // For admins, get all team members and managers in their domain
+      query = { 
+        ...baseAccessFilter,
+        role: { $in: ['team_member', 'manager'] }
+      };
+    } else {
+      // Default: get all team members in the same admin domain
+      query = { 
+        ...baseAccessFilter,
+        role: 'team_member' 
+      };
+    }
+    
+    console.log(`Team members query for role=${role}, userId=${userId}:`, query);
+    
+    const teamMembers = await User.find(query)
+      .populate(populateOptions)
+      .sort({ name: 1 });
+    
+    console.log(`Found ${teamMembers.length} team members for manager ${userId}`);
+    
     res.json(teamMembers.map(user => ({
+      ...user.toObject(),
+      id: user._id,
+      clientNames: user.clientIds?.map(client => client.name) || [],
+      managerName: user.managerId?.name || null,
+    })));
+  } catch (err) {
+    console.error('Team members API error:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Get managers
+router.get('/managers', async (req, res) => {
+  try {
+    const { role, userId } = req.query;
+    
+    // Get current user for access control
+    const currentUser = req.user || { role: role || 'guest', id: userId || null };
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
+    
+    // Build access filter for admin domain isolation
+    const accessFilter = buildAccessFilter(currentUser.role, currentUser.id, userAdminId);
+    
+    const managers = await User.find({ 
+      ...accessFilter,
+      role: 'manager' 
+    });
+    
+    console.log(`Found ${managers.length} managers in admin domain ${userAdminId}`);
+    
+    res.json(managers.map(user => ({
       ...user.toObject(),
       id: user._id,
     })));
@@ -177,13 +315,45 @@ router.get('/team-members', async (req, res) => {
   }
 });
 
-// Get managers
-router.get('/managers', async (req, res) => {
+// Get all team members (managers and team members) for admin
+router.get('/all-team-members', async (req, res) => {
   try {
-    const managers = await User.find({ role: 'manager' });
-    res.json(managers.map(user => ({
+    const { clientId, role, userId } = req.query;
+    
+    // Get current user for access control
+    const currentUser = req.user || { role: role || 'admin', id: userId || null };
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
+    
+    // Build access filter for admin domain isolation
+    const baseAccessFilter = buildAccessFilter(currentUser.role, currentUser.id, userAdminId);
+    
+    let query = { 
+      ...baseAccessFilter,
+      role: { $in: ['manager', 'team_member'] } 
+    };
+    
+    // If clientId is provided, filter team members who work on that client
+    if (clientId) {
+      query.clientIds = clientId;
+    }
+    
+    console.log(`All team members query for admin=${currentUser.id}, adminId=${userAdminId}:`, query);
+    
+    const teamMembers = await User.find(query)
+      .populate('clientIds', 'name')
+      .populate('managerId', 'name');
+      
+    console.log(`Found ${teamMembers.length} team members in admin domain ${userAdminId}`);
+      
+    res.json(teamMembers.map(user => ({
       ...user.toObject(),
       id: user._id,
+      clientNames: user.clientIds?.map(client => client.name) || [],
+      managerName: user.managerId?.name || null,
     })));
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -288,13 +458,26 @@ router.patch('/:id/assign-clients', async (req, res) => {
 });
 
 // Create manager
-router.post('/create-manager', async (req, res) => {
+router.post('/create-manager', sanitizeInput, validateUser, async (req, res) => {
   try {
+    const { name, email, password, phone } = req.body;
+
+    // Check if email is unique
+    const emailCheck = await checkEmailUnique(email);
+    if (!emailCheck.isValid) {
+      return res.status(400).json({ error: emailCheck.error });
+    }
+
     const manager = new User({
-      ...req.body,
+      name,
+      email,
+      password,
+      phone,
       role: 'manager',
     });
+    
     await manager.save();
+    
     res.status(201).json({
       ...manager.toObject(),
       id: manager._id,

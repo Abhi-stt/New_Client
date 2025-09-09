@@ -1,11 +1,27 @@
 const express = require('express');
 const CalendarEvent = require('../schemas/CalendarEvent');
+const { getUserAdminId, buildAccessFilter, setOwnershipFields } = require('../utils/accessControl');
 const router = express.Router();
 
 // Create a new calendar event
 router.post('/', async (req, res) => {
   try {
-    const event = new CalendarEvent(req.body);
+    // Get current user for ownership
+    const currentUser = req.user || { role: 'guest', id: null };
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
+    
+    // Set ownership fields
+    const ownershipFields = setOwnershipFields(currentUser.role, currentUser.id, userAdminId);
+    
+    const event = new CalendarEvent({
+      ...req.body,
+      ...ownershipFields
+    });
+    
     await event.save();
     res.status(201).json({
       ...event.toObject(),
@@ -20,31 +36,58 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { role, userId } = req.query;
+    
+    // Get current user for access control
+    const currentUser = req.user || { role: role || 'guest', id: userId || null };
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
     let query = {};
 
-    // Role-based filtering
+    // Role-based filtering with admin domain isolation
     if (role === 'client') {
-      // Clients can only see their own events
-      query = { clientId: userId };
+      // Clients can only see their own events within their admin domain
+      query = { 
+        adminId: userAdminId,
+        clientId: userId 
+      };
     } else if (role === 'team_member') {
-      // Team members can see events assigned to them
-      query = { assigneeId: userId };
+      // Team members can see events assigned to them within their admin domain
+      query = { 
+        adminId: userAdminId,
+        assigneeId: userId 
+      };
     } else if (role === 'manager') {
-      // Managers can see events for their team and clients
+      // Managers can see events for their team and clients within their admin domain
       const User = require('../schemas/User');
       const Client = require('../schemas/Client');
-      const teamMembers = await User.find({ managerId: userId }, '_id');
+      const teamMembers = await User.find({ 
+        managerId: userId,
+        adminId: userAdminId 
+      }, '_id');
       const teamMemberIds = teamMembers.map(u => u._id);
-      const clients = await Client.find({ managerId: userId }, '_id');
+      const clients = await Client.find({ 
+        managerId: userId,
+        adminId: userAdminId 
+      }, '_id');
       const clientIds = clients.map(c => c._id);
       query = {
+        adminId: userAdminId,
         $or: [
           { assigneeId: { $in: [userId, ...teamMemberIds] } },
           { clientId: { $in: clientIds } }
         ]
       };
+    } else if (role === 'super_admin') {
+      // Super admin can see all events across all domains
+      query = {};
+    } else {
+      // Admin can see all events in their domain only
+      const accessFilter = buildAccessFilter(currentUser.role, currentUser.id, userAdminId);
+      query = accessFilter;
     }
-    // Admin can see all events (no filter)
 
     const events = await CalendarEvent.find(query)
       .populate('clientId', 'name')

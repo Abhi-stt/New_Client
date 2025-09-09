@@ -34,17 +34,25 @@ export default function FirmsPage() {
 
   const fetchFirms = async () => {
     try {
-      const response = await fetch(`${HOST_URL}/api/firms?clientId=${user?.id}`)
+      const response = await fetch(`${HOST_URL}/api/firms?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
-      setFirms(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setFirms(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setFirms([])
+      }
     } catch (error) {
       console.error("Error fetching firms:", error)
+      setFirms([]) // Set empty array on error
     } finally {
       setLoading(false)
     }
   }
 
-  const filteredFirms = firms.filter((firm: any) => {
+  const filteredFirms = (Array.isArray(firms) ? firms : []).filter((firm: any) => {
     return (
       firm.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (selectedStatus === "all" || firm.status === selectedStatus) &&

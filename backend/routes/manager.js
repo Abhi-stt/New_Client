@@ -1,5 +1,6 @@
 const express = require('express');
 const Manager = require('../schemas/Manager');
+const { getUserAdminId, buildAccessFilter, setOwnershipFields } = require('../utils/accessControl');
 const router = express.Router();
 
 // Create a new manager
@@ -15,8 +16,25 @@ router.post('/', async (req, res) => {
 
 // Get all managers
 router.get('/', async (req, res) => {
-  const managers = await Manager.find();
-  res.json(managers);
+  try {
+    const { role, userId } = req.query;
+    
+    // Get current user for access control
+    const currentUser = req.user || { role: role || 'guest', id: userId || null };
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
+    
+    // Build access filter for admin domain isolation
+    const accessFilter = buildAccessFilter(currentUser.role, currentUser.id, userAdminId);
+    
+    const managers = await Manager.find(accessFilter);
+    res.json(managers);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Get manager by ID

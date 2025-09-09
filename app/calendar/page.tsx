@@ -19,8 +19,10 @@ export default function CalendarPage() {
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedClient, setSelectedClient] = useState("all")
   const [selectedPriority, setSelectedPriority] = useState("all")
+  const [selectedStatus, setSelectedStatus] = useState("all")
   const [view, setView] = useState("month")
   const [tasks, setTasks] = useState([])
+  const [filteredTasks, setFilteredTasks] = useState([])
 
   useEffect(() => {
     fetchTasks()
@@ -31,12 +33,76 @@ export default function CalendarPage() {
     try {
       const response = await fetch(`${HOST_URL}/api/tasks?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
-      setTasks(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setTasks(data)
+        setFilteredTasks(data) // Initialize filtered tasks
+      } else {
+        console.error('Expected array but got:', data)
+        setTasks([])
+        setFilteredTasks([])
+      }
     } catch (error) {
       console.error("Error fetching tasks:", error)
+      setTasks([]) // Set empty array on error
+      setFilteredTasks([])
     } finally {
       setLoading(false)
     }
+  }
+
+  // Generate recurring task instances
+  const generateRecurringInstances = (task) => {
+    if (!task.isRecurring || !task.recurrenceType || !task.dueDate) {
+      return [task]
+    }
+
+    const instances = []
+    const originalDate = new Date(task.dueDate)
+    const currentDate = new Date()
+    const endDate = new Date()
+    endDate.setFullYear(currentDate.getFullYear() + 1) // Generate for next year
+
+    let instanceDate = new Date(originalDate)
+    let count = 0
+    const maxInstances = task.recurrenceCount || 100
+
+    while (instanceDate <= endDate && count < maxInstances) {
+      if (instanceDate >= currentDate) {
+        const instance = {
+          ...task,
+          id: `${task.id}_${instanceDate.toISOString().split('T')[0]}`,
+          dueDate: instanceDate.toISOString(),
+          isRecurringInstance: true,
+          originalTaskId: task.id
+        }
+        instances.push(instance)
+        count++
+      }
+
+      // Calculate next occurrence
+      const nextDate = new Date(instanceDate)
+      switch (task.recurrenceType) {
+        case 'daily':
+          nextDate.setDate(nextDate.getDate() + (task.recurrenceInterval || 1))
+          break
+        case 'weekly':
+          nextDate.setDate(nextDate.getDate() + 7 * (task.recurrenceInterval || 1))
+          break
+        case 'monthly':
+          nextDate.setMonth(nextDate.getMonth() + (task.recurrenceInterval || 1))
+          break
+        case 'yearly':
+          nextDate.setFullYear(nextDate.getFullYear() + (task.recurrenceInterval || 1))
+          break
+        default:
+          nextDate.setDate(nextDate.getDate() + 1)
+      }
+      instanceDate = nextDate
+    }
+
+    return instances
   }
 
   const fetchClients = async () => {
@@ -49,24 +115,61 @@ export default function CalendarPage() {
     }
   }
 
-  const filteredEvents = events.filter((event: any) => {
-    return (
-      (selectedClient === "all" || event.clientId === selectedClient) &&
-      (selectedPriority === "all" || event.priority === selectedPriority)
-    )
-  })
+  // Live filtering effect
+  useEffect(() => {
+    // Ensure tasks is an array before filtering
+    const tasksArray = Array.isArray(tasks) ? tasks : [];
+    const filtered = tasksArray.filter((task: any) => {
+      const clientMatch = selectedClient === "all" || task.clientId === selectedClient
+      const priorityMatch = selectedPriority === "all" || task.priority === selectedPriority
+      const statusMatch = selectedStatus === "all" || task.status === selectedStatus
+      return clientMatch && priorityMatch && statusMatch
+    })
+    setFilteredTasks(filtered)
+  }, [tasks, selectedClient, selectedPriority, selectedStatus])
 
   const canCreateEvents = user?.role === "admin" || user?.role === "manager" || user?.role === "client"
 
-  // Map tasks to calendar event format
-  const calendarTasks = tasks.map((task: any) => ({
-    id: task.id,
-    title: task.title,
-    date: task.dueDate,
-    priority: task.priority,
-    clientName: task.clientName,
-    description: task.description,
-  }))
+  // Generate calendar events from filtered tasks (including recurring instances)
+  const generateCalendarEvents = () => {
+    const events = []
+    
+    filteredTasks.forEach((task: any) => {
+      if (task.isRecurring) {
+        // Generate recurring instances
+        const instances = generateRecurringInstances(task)
+        instances.forEach(instance => {
+          events.push({
+            id: instance.id,
+            title: instance.title,
+            date: instance.dueDate,
+            priority: instance.priority,
+            clientName: instance.clientName,
+            description: instance.description,
+            status: instance.status,
+            isRecurring: true,
+            originalTaskId: instance.originalTaskId
+          })
+        })
+      } else {
+        // Single occurrence task
+        events.push({
+          id: task.id,
+          title: task.title,
+          date: task.dueDate,
+          priority: task.priority,
+          clientName: task.clientName,
+          description: task.description,
+          status: task.status,
+          isRecurring: false
+        })
+      }
+    })
+    
+    return events
+  }
+
+  const calendarTasks = generateCalendarEvents()
 
   if (loading) {
     return (
@@ -83,7 +186,7 @@ export default function CalendarPage() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -116,11 +219,11 @@ export default function CalendarPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Clients</SelectItem>
-                  {clients.map((client: any) => (
+                  {Array.isArray(clients) ? clients.map((client: any) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}
                     </SelectItem>
-                  ))}
+                  )) : []}
                 </SelectContent>
               </Select>
 
@@ -133,6 +236,21 @@ export default function CalendarPage() {
                   <SelectItem value="high">High Priority</SelectItem>
                   <SelectItem value="medium">Medium Priority</SelectItem>
                   <SelectItem value="low">Low Priority</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="review">Review</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -152,6 +270,7 @@ export default function CalendarPage() {
                 onClick={() => {
                   setSelectedClient("all")
                   setSelectedPriority("all")
+                  setSelectedStatus("all")
                 }}
               >
                 Clear Filters
@@ -161,8 +280,8 @@ export default function CalendarPage() {
         </Card>
 
         {/* Calendar Component */}
-        <Card>
-          <CardContent className="p-6">
+        <Card className="w-full">
+          <CardContent className="p-0">
             <CustomCalendar events={calendarTasks} />
           </CardContent>
         </Card>

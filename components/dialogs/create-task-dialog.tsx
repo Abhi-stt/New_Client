@@ -67,21 +67,37 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
 
   const fetchClients = async () => {
     try {
-      const response = await fetch(`${HOST_URL}/api/clients`)
+      const response = await fetch(`${HOST_URL}/api/clients?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
-      setClients(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setClients(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setClients([])
+      }
     } catch (error) {
       console.error("Error fetching clients:", error)
+      setClients([]) // Set empty array on error
     }
   }
 
   const fetchTeamMembers = async () => {
     try {
-      const response = await fetch(`${HOST_URL}/api/users/team-members`)
+      const response = await fetch(`${HOST_URL}/api/users/team-members?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
-      setTeamMembers(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setTeamMembers(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setTeamMembers([])
+      }
     } catch (error) {
       console.error("Error fetching team members:", error)
+      setTeamMembers([]) // Set empty array on error
     }
   }
 
@@ -123,7 +139,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
 
     try {
       // Create task
-      const taskResponse = await fetch(`${HOST_URL}/api/tasks`, {
+      const taskResponse = await fetch(`${HOST_URL}/api/tasks?role=${user?.role}&userId=${user?.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -240,17 +256,17 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
                   <SelectContent>
-                    {clients.map((client: any) => (
+                    {Array.isArray(clients) ? clients.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
                       </SelectItem>
-                    ))}
+                    )) : []}
                   </SelectContent>
                 </Select>
               </div>
             )}
             {/* If client, show their name as read-only */}
-            {user?.role === "client" && clients.length > 0 && (
+            {user?.role === "client" && Array.isArray(clients) && clients.length > 0 && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Client</Label>
                 <div className="col-span-3">
@@ -272,11 +288,11 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
                     <SelectValue placeholder="Select assignee" />
                   </SelectTrigger>
                   <SelectContent>
-                    {teamMembers.map((member: any) => (
+                    {Array.isArray(teamMembers) ? teamMembers.map((member: any) => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.name}
                       </SelectItem>
-                    ))}
+                    )) : []}
                   </SelectContent>
                 </Select>
               </div>

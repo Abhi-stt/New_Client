@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export function TeamMemberDashboard() {
   const { user } = useAuth()
+  const router = useRouter()
   const [stats, setStats] = useState({
     assignedTasks: 0,
     completedTasks: 0,
@@ -64,13 +66,13 @@ export function TeamMemberDashboard() {
           <p className="text-gray-600">Track your tasks and client work</p>
         </div>
         <div className="flex space-x-2">
-          <Button>
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Document
+          <Button onClick={() => window.location.href = '/tasks'}>
+            <CheckSquare className="mr-2 h-4 w-4" />
+            Manage Tasks
           </Button>
           <Button variant="outline">
-            <Calendar className="mr-2 h-4 w-4" />
-            View Calendar
+            <Upload className="mr-2 h-4 w-4" />
+            Upload Document
           </Button>
         </div>
       </div>
@@ -146,19 +148,35 @@ export function TeamMemberDashboard() {
             <CardDescription>Common tasks and actions</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button variant="outline" className="w-full justify-start bg-transparent">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              onClick={() => router.push('/tasks')}
+            >
               <CheckSquare className="mr-2 h-4 w-4" />
               View My Tasks
             </Button>
-            <Button variant="outline" className="w-full justify-start bg-transparent">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              onClick={() => router.push('/documents')}
+            >
               <FileText className="mr-2 h-4 w-4" />
               My Documents
             </Button>
-            <Button variant="outline" className="w-full justify-start bg-transparent">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              onClick={() => router.push('/calendar')}
+            >
               <Calendar className="mr-2 h-4 w-4" />
               Schedule
             </Button>
-            <Button variant="outline" className="w-full justify-start bg-transparent">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              onClick={() => router.push('/documents')}
+            >
               <Upload className="mr-2 h-4 w-4" />
               Upload Files
             </Button>

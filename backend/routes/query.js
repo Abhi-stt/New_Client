@@ -1,11 +1,32 @@
 const express = require('express');
 const Query = require('../schemas/Query');
+const { getUserAdminId, buildAccessFilter, setOwnershipFields } = require('../utils/accessControl');
 const router = express.Router();
 
 // Create a new query
 router.post('/', async (req, res) => {
   try {
-    const query = new Query(req.body);
+    // Get current user for ownership (from query params or middleware)
+    const { role, userId } = req.query;
+    const currentUser = req.user || { 
+      role: role || 'guest', 
+      id: userId || null 
+    };
+    
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
+    
+    // Set ownership fields
+    const ownershipFields = setOwnershipFields(currentUser.role, currentUser.id, userAdminId);
+    
+    const query = new Query({
+      ...req.body,
+      ...ownershipFields
+    });
+    
     await query.save();
     res.status(201).json(query);
   } catch (err) {
@@ -15,11 +36,30 @@ router.post('/', async (req, res) => {
 
 // Get all queries
 router.get('/', async (req, res) => {
-  const queries = await Query.find();
-  res.json(queries.map(query => ({
-    ...query.toObject(),
-    id: query._id,
-  })));
+  try {
+    const { role, userId } = req.query;
+    
+    // Get current user for access control
+    const currentUser = req.user || { role: role || 'guest', id: userId || null };
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
+    
+    // Build access filter for admin domain isolation
+    const accessFilter = buildAccessFilter(currentUser.role, currentUser.id, userAdminId);
+    
+    const queries = await Query.find(accessFilter)
+      .sort({ createdAt: -1 }); // Sort by most recent first
+      
+    res.json(queries.map(query => ({
+      ...query.toObject(),
+      id: query._id,
+    })));
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Get query by ID

@@ -92,7 +92,7 @@ export function CustomCalendar({ events }: CustomCalendarProps) {
     : [];
 
   return (
-    <div className="w-full max-w-3xl mx-auto bg-white rounded-lg shadow p-4">
+    <div className="w-full bg-white p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <Button variant="ghost" size="icon" onClick={() => {

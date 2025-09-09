@@ -10,10 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, Activity, UserPlus, Eye, Edit, Trash2, Search, Filter, Calendar } from "lucide-react"
+import { Users, Activity, UserPlus, Eye, EyeOff, Edit, Trash2, Search, Filter, Calendar } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api"
+import { useFormValidation, validationRules } from "@/hooks/useFormValidation"
+import { ValidationError, ValidationHint } from "@/components/ui/validation-error"
 
 interface User {
   _id: string
@@ -61,21 +63,35 @@ export function SuperAdminDashboard() {
   const [users, setUsers] = useState<User[]>([])
   const [activities, setActivities] = useState<UserActivity[]>([])
   const [loading, setLoading] = useState(true)
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [showUserDetails, setShowUserDetails] = useState(false)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
 
-  // Create user form state
-  const [newUser, setNewUser] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "client",
-    phone: ""
-  })
+  // Initialize form validation
+  const {
+    formState,
+    errors,
+    isValid,
+    setFieldValue,
+    setFieldTouched,
+    validateForm,
+    resetForm,
+    getFieldProps
+  } = useFormValidation(
+    {
+      name: "",
+      email: "",
+      password: "",
+      role: "client",
+      phone: "",
+    },
+    validationRules.user
+  )
 
   useEffect(() => {
     fetchDashboardData()
@@ -109,11 +125,33 @@ export function SuperAdminDashboard() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      // Get the first error message to show specific guidance
+      const firstError = Object.values(errors)[0]
+      toast({
+        title: "Please fix the form",
+        description: firstError || "Please check all required fields",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
+      // Prepare user data from form state
+      const userData = {
+        name: formState.name.value,
+        email: formState.email.value,
+        password: formState.password.value,
+        role: formState.role.value,
+        phone: formState.phone.value
+      }
+
       const response = await fetch(`${api.superAdminCreateUser}?userId=${user?.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newUser)
+        body: JSON.stringify(userData)
       })
 
       if (response.ok) {
@@ -122,66 +160,108 @@ export function SuperAdminDashboard() {
           description: "User created successfully"
         })
         setShowCreateUser(false)
-        setNewUser({ name: "", email: "", password: "", role: "client", phone: "" })
+        resetForm()
         fetchDashboardData()
       } else {
         const error = await response.json()
+        // Show user-friendly error messages
+        let errorMessage = "Failed to create user"
+        
+        if (error.error && error.error.includes("email")) {
+          errorMessage = "This email is already in use. Please use a different email address."
+        } else if (error.error && error.error.includes("role")) {
+          errorMessage = "You don't have permission to create this type of user."
+        } else if (error.details) {
+          // Show the first validation error from server
+          const firstError = Object.values(error.details)[0]
+          errorMessage = Array.isArray(firstError) ? firstError[0] : firstError
+        }
+        
         toast({
-          title: "Error",
-          description: error.error || "Failed to create user",
+          title: "Cannot create user",
+          description: errorMessage,
           variant: "destructive"
         })
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to create user",
+        title: "Connection Error",
+        description: "Please check your internet connection and try again",
         variant: "destructive"
       })
     }
   }
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return
+    // Find the user to show their name in confirmation
+    const userToDelete = users.find(u => u._id === userId)
+    const userName = userToDelete ? `${userToDelete.name} (${userToDelete.email})` : 'this user'
+    
+    if (!confirm(`Are you sure you want to permanently delete ${userName}?\n\nThis action cannot be undone.`)) return
 
+    setDeletingUserId(userId)
     try {
       const response = await fetch(`${api.superAdminDeleteUser(userId)}?userId=${user?.id}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: {
+          'Content-Type': 'application/json'
+        }
       })
 
       if (response.ok) {
         toast({
-          title: "Success",
-          description: "User deleted successfully"
+          title: "User Deleted",
+          description: `${userName} has been permanently deleted`
         })
         fetchDashboardData()
       } else {
         const error = await response.json()
+        // Show user-friendly error messages
+        let errorMessage = "Failed to delete user"
+        
+        if (error.error && error.error.includes("own account")) {
+          errorMessage = "You cannot delete your own account"
+        } else if (error.error && error.error.includes("managing other users")) {
+          errorMessage = "Cannot delete this user. They are managing other users. Please reassign them first."
+        } else if (error.error && error.error.includes("not found")) {
+          errorMessage = "User not found. They may have already been deleted."
+        } else if (error.error) {
+          errorMessage = error.error
+        }
+        
         toast({
-          title: "Error",
-          description: error.error || "Failed to delete user",
+          title: "Cannot Delete User",
+          description: errorMessage,
           variant: "destructive"
         })
       }
     } catch (error) {
+      console.error('Delete user error:', error)
       toast({
-        title: "Error",
-        description: "Failed to delete user",
+        title: "Connection Error",
+        description: "Please check your internet connection and try again",
         variant: "destructive"
       })
+    } finally {
+      setDeletingUserId(null)
     }
   }
 
-  const filteredUsers = users.filter((user) => {
-    return (
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    ) &&
-    (roleFilter === "all" || user.role === roleFilter) &&
-    (statusFilter === "all" || 
-     (statusFilter === "active" && user.isActive) ||
-     (statusFilter === "inactive" && !user.isActive))
-  })
+  const filteredUsers = users
+    .filter((user) => {
+      return (
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      ) &&
+      (roleFilter === "all" || user.role === roleFilter) &&
+      (statusFilter === "all" || 
+       (statusFilter === "active" && user.isActive) ||
+       (statusFilter === "inactive" && !user.isActive))
+    })
+    .sort((a, b) => {
+      // Sort by creation date, newest first
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -217,10 +297,16 @@ export function SuperAdminDashboard() {
           <h1 className="text-2xl font-bold text-gray-900">Super Admin Dashboard</h1>
           <p className="text-gray-600">Manage all users and monitor system activities</p>
         </div>
-        <Button onClick={() => setShowCreateUser(true)}>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Create User
-        </Button>
+        <div className="flex space-x-2">
+          <Button onClick={() => window.location.href = '/tasks'}>
+            <Calendar className="mr-2 h-4 w-4" />
+            Manage Tasks
+          </Button>
+          <Button onClick={() => setShowCreateUser(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Create User
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -342,6 +428,7 @@ export function SuperAdminDashboard() {
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
                       <TableHead>Last Login</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -360,6 +447,9 @@ export function SuperAdminDashboard() {
                           <Badge variant={user.isActive ? "default" : "secondary"}>
                             {user.isActive ? "Active" : "Inactive"}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {new Date(user.createdAt).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
                           {user.lastLoginAt 
@@ -397,9 +487,14 @@ export function SuperAdminDashboard() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleDeleteUser(user._id)}
-                                className="text-red-600 hover:text-red-700"
+                                disabled={deletingUserId === user._id}
+                                className="text-red-600 hover:text-red-700 disabled:opacity-50"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                {deletingUserId === user._id ? (
+                                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
                               </Button>
                             )}
                           </div>
@@ -473,36 +568,59 @@ export function SuperAdminDashboard() {
               <Label htmlFor="name">Full Name</Label>
               <Input
                 id="name"
-                value={newUser.name}
-                onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                required
+                value={formState.name.value}
+                onChange={(e) => setFieldValue('name', e.target.value)}
+                onBlur={() => setFieldTouched('name', true)}
+                className={errors.name ? 'border-red-500' : ''}
               />
+              <ValidationError error={errors.name} />
+              <ValidationHint hint="Enter the user's full name (2-50 characters, letters only)" />
             </div>
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                value={newUser.email}
-                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                required
+                value={formState.email.value}
+                onChange={(e) => setFieldValue('email', e.target.value)}
+                onBlur={() => setFieldTouched('email', true)}
+                className={errors.email ? 'border-red-500' : ''}
               />
+              <ValidationError error={errors.email} />
+              <ValidationHint hint="Enter a valid email address" />
             </div>
             <div>
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={newUser.password}
-                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formState.password.value}
+                  onChange={(e) => setFieldValue('password', e.target.value)}
+                  onBlur={() => setFieldTouched('password', true)}
+                  className={errors.password ? 'border-red-500' : ''}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              <ValidationError error={errors.password} />
+              <ValidationHint hint="Password must be 8+ characters with uppercase, lowercase, number, and special character (@$!%*?&)" />
             </div>
             <div>
               <Label htmlFor="role">Role</Label>
-              <Select value={newUser.role} onValueChange={(value) => setNewUser({ ...newUser, role: value })}>
-                <SelectTrigger>
-                  <SelectValue />
+              <Select 
+                value={formState.role.value} 
+                onValueChange={(value) => setFieldValue('role', value)}
+              >
+                <SelectTrigger className={errors.role ? 'border-red-500' : ''}>
+                  <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Admin</SelectItem>
@@ -511,20 +629,29 @@ export function SuperAdminDashboard() {
                   <SelectItem value="client">Client</SelectItem>
                 </SelectContent>
               </Select>
+              <ValidationError error={errors.role} />
+              <ValidationHint hint="Select the appropriate role for the user" />
             </div>
             <div>
               <Label htmlFor="phone">Phone (Optional)</Label>
               <Input
                 id="phone"
-                value={newUser.phone}
-                onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                value={formState.phone.value}
+                onChange={(e) => setFieldValue('phone', e.target.value)}
+                onBlur={() => setFieldTouched('phone', true)}
+                className={errors.phone ? 'border-red-500' : ''}
+                placeholder="+91-9876543210"
               />
+              <ValidationError error={errors.phone} />
+              <ValidationHint hint="Enter a valid 10-digit Indian mobile number (e.g., 9876543210)" />
             </div>
             <div className="flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={() => setShowCreateUser(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Create User</Button>
+              <Button type="submit" disabled={!isValid}>
+                {!isValid ? "Please fill all required fields" : "Create User"}
+              </Button>
             </div>
           </form>
         </DialogContent>

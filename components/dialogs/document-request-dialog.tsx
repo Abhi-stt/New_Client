@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/auth-provider"
 import { HOST_URL } from "@/lib/api"
 
 interface DocumentRequestDialogProps {
@@ -27,6 +28,7 @@ interface DocumentRequestDialogProps {
 }
 
 export function DocumentRequestDialog({ open, onOpenChange, onSuccess }: DocumentRequestDialogProps) {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     clientId: "",
     name: "",
@@ -49,11 +51,19 @@ export function DocumentRequestDialog({ open, onOpenChange, onSuccess }: Documen
 
   const fetchClients = async () => {
     try {
-      const response = await fetch(`${HOST_URL}/api/clients`)
+      const response = await fetch(`${HOST_URL}/api/clients?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
-      setClients(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setClients(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setClients([])
+      }
     } catch (error) {
       console.error("Error fetching clients:", error)
+      setClients([]) // Set empty array on error
     }
   }
 
@@ -62,7 +72,7 @@ export function DocumentRequestDialog({ open, onOpenChange, onSuccess }: Documen
     setLoading(true)
 
     // Find the selected client's email
-    const selectedClient = clients.find((c: any) => c.id === formData.clientId);
+    const selectedClient = Array.isArray(clients) ? clients.find((c: any) => c.id === formData.clientId) : null;
     const clientEmail = selectedClient ? selectedClient.email : "";
     const payload = { ...formData, clientEmail };
 
@@ -130,11 +140,11 @@ export function DocumentRequestDialog({ open, onOpenChange, onSuccess }: Documen
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
                 <SelectContent>
-                  {clients.map((client: any) => (
+                  {Array.isArray(clients) ? clients.map((client: any) => (
                     <SelectItem key={client.id} value={client.id}>
                       {client.name}
                     </SelectItem>
-                  ))}
+                  )) : []}
                 </SelectContent>
               </Select>
             </div>

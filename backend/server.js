@@ -59,11 +59,13 @@ const clientRoutes = require('./routes/client');
 const firmRoutes = require('./routes/firm');
 const managerRoutes = require('./routes/manager');
 const taskRoutes = require('./routes/task');
+const serviceRoutes = require('./routes/service');
 const queryRoutes = require('./routes/query');
 const documentRoutes = require('./routes/document');
 const calendarEventRoutes = require('./routes/calendarEvent');
 const dashboardRoutes = require('./routes/dashboard');
 const superAdminRoutes = require('./routes/superAdmin');
+const complianceRoutes = require('./routes/compliance');
 
 // Use routes
 app.use('/api/auth', userRoutes); // Auth routes (login, etc.)
@@ -72,11 +74,13 @@ app.use('/api/clients', clientRoutes);
 app.use('/api/firms', firmRoutes);
 app.use('/api/managers', managerRoutes);
 app.use('/api/tasks', taskRoutes);
+app.use('/api/services', serviceRoutes);
 app.use('/api/queries', queryRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/calendar-events', calendarEventRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/super-admin', superAdminRoutes);
+app.use('/api/compliance', complianceRoutes);
 
 // Google OAuth endpoints
 app.get('/api/auth/google', (req, res) => {

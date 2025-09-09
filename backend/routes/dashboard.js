@@ -6,13 +6,20 @@ const Document = require('../schemas/Document');
 const Query = require('../schemas/Query');
 const Firm = require('../schemas/Firm');
 const mongoose = require('mongoose');
+const { getUserAdminId, buildAccessFilter, getAdminDomainStats } = require('../utils/accessControl');
 const router = express.Router();
 
 // Helper function to safely convert string to ObjectId
 const safeObjectId = (id) => {
   try {
-    return mongoose.Types.ObjectId(id);
+    if (!id) return null;
+    // Check if it's already an ObjectId
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      return new mongoose.Types.ObjectId(id);
+    }
+    return null;
   } catch (error) {
+    console.error('ObjectId conversion error:', error);
     return null;
   }
 };
@@ -20,16 +27,36 @@ const safeObjectId = (id) => {
 // Admin dashboard
 router.get('/admin', async (req, res) => {
   try {
-    // Fetch real data from database
-    const totalUsers = await User.countDocuments();
-    const totalClients = await Client.countDocuments();
-    const totalDocuments = await Document.countDocuments();
-    const pendingTasks = await Task.countDocuments({ status: { $in: ['pending', 'in_progress'] } });
+    const { userId } = req.query;
+    
+    // Get current user for access control
+    const currentUser = req.user || { role: 'admin', id: userId || null };
+    if (!currentUser.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const userAdminId = await getUserAdminId(currentUser.id);
+    
+    // Build access filter for admin domain isolation
+    const accessFilter = buildAccessFilter(currentUser.role, currentUser.id, userAdminId);
+    
+    // Fetch real data from database within admin domain
+    const totalUsers = await User.countDocuments(accessFilter);
+    const totalClients = await Client.countDocuments(accessFilter);
+    const totalDocuments = await Document.countDocuments(accessFilter);
+    const pendingTasks = await Task.countDocuments({ 
+      ...accessFilter,
+      status: { $in: ['pending', 'in_progress'] } 
+    });
     const overdueTasks = await Task.countDocuments({ 
+      ...accessFilter,
       status: { $in: ['pending', 'in_progress'] },
       dueDate: { $lt: new Date() }
     });
-    const completedTasks = await Task.countDocuments({ status: 'completed' });
+    const completedTasks = await Task.countDocuments({ 
+      ...accessFilter,
+      status: 'completed' 
+    });
     const totalTasks = completedTasks + pendingTasks;
     const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
@@ -131,49 +158,128 @@ router.get('/manager', async (req, res) => {
     const { userId } = req.query;
     const managerId = safeObjectId(userId);
     
-    // Fetch real data for the manager
-    const teamMembers = managerId ? await User.countDocuments({ managerId }) : 0;
-    const assignedClients = managerId ? await Client.countDocuments({ managerId }) : 0;
-    const activeTasks = managerId ? await Task.countDocuments({ 
-      assigneeId: managerId, 
-      status: { $in: ['pending', 'in_progress'] } 
-    }) : 0;
-    const completedTasks = managerId ? await Task.countDocuments({ 
-      assigneeId: managerId, 
-      status: 'completed' 
-    }) : 0;
-    const pendingQueries = await Query.countDocuments({ 
-      status: { $in: ['pending', 'in_progress'] } 
+    if (!managerId) {
+      return res.status(400).json({ error: 'Valid managerId is required' });
+    }
+    
+    // Get admin domain for the manager
+    const userAdminId = await getUserAdminId(managerId);
+
+    console.log(`Fetching manager dashboard data for manager ID: ${managerId}, admin: ${userAdminId}`);
+
+    // 1. Get team members under this manager within the same admin domain
+    const teamMembers = await User.countDocuments({ 
+      managerId: managerId,
+      adminId: userAdminId,
+      status: 'active',
+      role: { $in: ['team_member', 'manager'] }
     });
 
-    // Get team performance data
-    const teamPerformance = managerId ? await User.find({ managerId })
-      .lean()
-      .map(user => ({
-        name: user.name,
-        tasksCompleted: 0, // This would need to be calculated
-        clientsAssigned: 0, // This would need to be calculated
-        rating: 4.5
-      })) : [];
+    // 2. Get assigned clients within the admin domain
+    // First, get all users under this manager to find their client assignments
+    const teamMemberIds = await User.find({ 
+      managerId: managerId,
+      adminId: userAdminId,
+      status: 'active',
+      role: { $in: ['team_member', 'manager'] }
+    }).distinct('_id');
+
+    // Add the manager's own ID to include their direct client assignments
+    teamMemberIds.push(managerId);
+
+    // Get unique clients assigned to the manager and their team within admin domain
+    const assignedClientIds = await Task.find({
+      adminId: userAdminId,
+      $or: [
+        { assigneeId: { $in: teamMemberIds } },
+        { createdBy: managerId }
+      ],
+      clientId: { $exists: true, $ne: null }
+    }).distinct('clientId');
+
+    const assignedClients = assignedClientIds.length;
+
+    // 3. Get pending tasks for the manager's team within admin domain
+    const pendingTasks = await Task.countDocuments({
+      adminId: userAdminId,
+      $or: [
+        { assigneeId: { $in: teamMemberIds } },
+        { createdBy: managerId }
+      ],
+      status: { $in: ['pending', 'in_progress'] }
+    });
+
+    // 4. Get completed tasks for the manager's team within admin domain
+    const completedTasks = await Task.countDocuments({
+      adminId: userAdminId,
+      $or: [
+        { assigneeId: { $in: teamMemberIds } },
+        { createdBy: managerId }
+      ],
+      status: 'completed'
+    });
+
+    // 5. Get overdue tasks within admin domain
+    const overdueTasks = await Task.countDocuments({
+      adminId: userAdminId,
+      $or: [
+        { assigneeId: { $in: teamMemberIds } },
+        { createdBy: managerId }
+      ],
+      status: { $in: ['pending', 'in_progress'] },
+      dueDate: { $lt: new Date() }
+    });
+
+    // 6. Calculate team performance percentage
+    const totalTeamTasks = pendingTasks + completedTasks;
+    const teamPerformanceRate = totalTeamTasks > 0 ? Math.round((completedTasks / totalTeamTasks) * 100) : 0;
+
+    // 7. Get recent team activities within admin domain
+    const recentTeamTasks = await Task.find({
+      adminId: userAdminId,
+      $or: [
+        { assigneeId: { $in: teamMemberIds } },
+        { createdBy: managerId }
+      ]
+    })
+    .populate('assigneeId', 'name')
+    .populate('clientId', 'name')
+    .sort({ updatedAt: -1 })
+    .limit(10)
+    .lean();
+
+    const teamActivities = recentTeamTasks.map(task => ({
+      description: `${task.title} - ${task.status ? task.status.replace('_', ' ') : 'unknown'}`,
+      timestamp: new Date(task.updatedAt).toLocaleDateString(),
+      member: task.assigneeId?.name || 'Unassigned',
+      client: task.clientId?.name || 'No Client'
+    }));
+
+    console.log(`Manager dashboard stats: TeamMembers=${teamMembers}, Clients=${assignedClients}, Pending=${pendingTasks}, Completed=${completedTasks}, Overdue=${overdueTasks}`);
 
     const dashboardData = {
       stats: {
-        assignedClients,
         teamMembers,
-        activeTasks,
+        assignedClients,
+        pendingTasks,
         completedTasks,
-        pendingQueries,
-        complianceRate: 88,
+        overdueItems: overdueTasks,
+        teamPerformance: teamPerformanceRate,
       },
-      teamPerformance,
-      recentTasks: [
-        { title: 'GST Return Filing', client: 'ABC Corp', assignee: 'John Smith', dueDate: '2024-01-20', status: 'in_progress' },
-        { title: 'Bank Reconciliation', client: 'XYZ Ltd', assignee: 'Jane Doe', dueDate: '2024-01-22', status: 'pending' }
-      ]
+      teamPerformance: teamActivities,
+      recentTasks: recentTeamTasks.slice(0, 5).map(task => ({
+        title: task.title,
+        client: task.clientId?.name || 'No Client',
+        assignee: task.assigneeId?.name || 'Unassigned',
+        dueDate: task.dueDate,
+        status: task.status
+      }))
     };
+
     res.json(dashboardData);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('Manager dashboard error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

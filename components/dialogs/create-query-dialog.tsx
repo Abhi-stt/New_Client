@@ -42,7 +42,7 @@ export function CreateQueryDialog({ open, onOpenChange, onSuccess }: CreateQuery
     setLoading(true)
 
     try {
-      const response = await fetch(`${HOST_URL}/api/queries`, {
+      const response = await fetch(`${HOST_URL}/api/queries?role=${user?.role}&userId=${user?.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

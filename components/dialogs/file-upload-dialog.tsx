@@ -62,27 +62,59 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
       } else {
         fetchClients()
       }
-      fetchFirms()
+      // Don't fetch firms initially - only when a client is selected
     }
   }, [open, user])
 
+  // Fetch firms when client selection changes
+  useEffect(() => {
+    if (formData.clientId && formData.clientId !== "none") {
+      fetchFirms(formData.clientId)
+    } else {
+      setFirms([]) // Clear firms when no client selected
+      // Reset firm selection when client changes
+      setFormData(prev => ({ ...prev, firmId: "" }))
+    }
+  }, [formData.clientId])
+
   const fetchClients = async () => {
     try {
-      const response = await fetch(`${HOST_URL}/api/clients`)
+      const response = await fetch(`${HOST_URL}/api/clients?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
-      setClients(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setClients(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setClients([])
+      }
     } catch (error) {
       console.error("Error fetching clients:", error)
+      setClients([]) // Set empty array on error
     }
   }
 
-  const fetchFirms = async () => {
+  const fetchFirms = async (clientId?: string) => {
     try {
-      const response = await fetch(`${HOST_URL}/api/firms?role=${user?.role}&userId=${user?.id}`)
+      let url = `${HOST_URL}/api/firms?role=${user?.role}&userId=${user?.id}`
+      if (clientId) {
+        url += `&clientId=${clientId}`
+      }
+      
+      const response = await fetch(url)
       const data = await response.json()
-      setFirms(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setFirms(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setFirms([])
+      }
     } catch (error) {
       console.error("Error fetching firms:", error)
+      setFirms([]) // Set empty array on error
     }
   }
 
@@ -90,14 +122,18 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
     try {
       const response = await fetch(`${HOST_URL}/api/clients?role=client&userId=${user?.id}`)
       const data = await response.json()
-      if (data.length > 0) {
+      
+      if (Array.isArray(data) && data.length > 0) {
         setClients(data)
         setFormData((prev) => ({ ...prev, clientId: data[0].id }))
       } else {
-        // Fallback: set clientId to user.id
+        // Fallback: set clientId to user.id and empty clients array
+        setClients([])
         setFormData((prev) => ({ ...prev, clientId: user?.id || "" }))
       }
     } catch (error) {
+      console.error("Error fetching client for user:", error)
+      setClients([])
       setFormData((prev) => ({ ...prev, clientId: user?.id || "" }))
     }
   }
@@ -271,17 +307,17 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
                     <SelectValue placeholder="Select client" />
                   </SelectTrigger>
                   <SelectContent>
-                    {clients.map((client: Client) => (
+                    {Array.isArray(clients) ? clients.map((client: Client) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
                       </SelectItem>
-                    ))}
+                    )) : []}
                   </SelectContent>
                 </Select>
               </div>
             )}
             {/* If client, show their name as read-only */}
-            {user?.role === "client" && clients.length > 0 && (
+            {user?.role === "client" && Array.isArray(clients) && clients.length > 0 && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right">Client</Label>
                 <div className="col-span-3">
@@ -290,27 +326,30 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
               </div>
             )}
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="firm" className="text-right">
-                Firm
-              </Label>
-              <Select
-                value={formData.firmId || "none"}
-                onValueChange={(value) => setFormData({ ...formData, firmId: value === "none" ? "" : value })}
-              >
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select firm (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Firm</SelectItem>
-                  {firms.map((firm: any) => (
-                    <SelectItem key={firm.id} value={firm.id}>
-                      {firm.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Only show firms dropdown when a client is selected */}
+            {formData.clientId && formData.clientId !== "none" && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="firm" className="text-right">
+                  Firm
+                </Label>
+                <Select
+                  value={formData.firmId || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, firmId: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select firm (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Firm</SelectItem>
+                    {Array.isArray(firms) ? firms.map((firm: any) => (
+                      <SelectItem key={firm.id} value={firm.id}>
+                        {firm.name}
+                      </SelectItem>
+                    )) : []}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Synchronization Options */}
             <div className="grid grid-cols-4 items-start gap-4">

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/components/auth-provider"
 import { HOST_URL } from "@/lib/api"
 
 interface AssignClientDialogProps {
@@ -25,6 +26,7 @@ interface AssignClientDialogProps {
 }
 
 export function AssignClientDialog({ member, open, onOpenChange, onSuccess }: AssignClientDialogProps) {
+  const { user } = useAuth()
   const [clients, setClients] = useState([])
   const [selectedClients, setSelectedClients] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -39,11 +41,19 @@ export function AssignClientDialog({ member, open, onOpenChange, onSuccess }: As
 
   const fetchClients = async () => {
     try {
-      const response = await fetch(`${HOST_URL}/api/clients`)
+      const response = await fetch(`${HOST_URL}/api/clients?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
-      setClients(data)
+      
+      // Ensure data is an array before setting
+      if (Array.isArray(data)) {
+        setClients(data)
+      } else {
+        console.error('Expected array but got:', data)
+        setClients([])
+      }
     } catch (error) {
       console.error("Error fetching clients:", error)
+      setClients([]) // Set empty array on error
     }
   }
 
@@ -103,7 +113,7 @@ export function AssignClientDialog({ member, open, onOpenChange, onSuccess }: As
           <div className="grid gap-4 py-4">
             <Label>Select Clients:</Label>
             <div className="max-h-60 overflow-y-auto space-y-2">
-              {clients.map((client: any) => (
+              {Array.isArray(clients) ? clients.map((client: any) => (
                 <div key={client.id} className="flex items-center space-x-2">
                   <Checkbox
                     id={client.id}
@@ -114,7 +124,7 @@ export function AssignClientDialog({ member, open, onOpenChange, onSuccess }: As
                     {client.name}
                   </Label>
                 </div>
-              ))}
+              )) : []}
             </div>
           </div>
           <DialogFooter>
