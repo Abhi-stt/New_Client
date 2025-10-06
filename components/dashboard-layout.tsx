@@ -29,6 +29,7 @@ import {
   Shield,
   Building,
   CheckSquare,
+  Mail,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -50,7 +51,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       { name: "Tasks", href: "/tasks", icon: CheckSquare },
       { name: "Calendar", href: "/calendar", icon: Calendar },
       { name: "Queries", href: "/queries", icon: MessageSquare },
+      { name: "Email", href: "/email", icon: Mail },
     ]
+
+    if (user?.role === "super_admin") {
+      return [
+        ...baseItems,
+        { name: "Super Admin", href: "/super-admin", icon: Shield },
+        { name: "Team Management", href: "/team", icon: Users },
+        { name: "Client Management", href: "/clients", icon: Building },
+      ]
+    }
 
     if (user?.role === "admin") {
       return [

@@ -10,7 +10,7 @@ interface User {
   id: string
   email: string
   name: string
-  role: "admin" | "manager" | "team_member" | "client"
+  role: "super_admin" | "admin" | "manager" | "team_member" | "client"
   managerId?: string
   clientIds?: string[]
   firmIds?: string[]
