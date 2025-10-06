@@ -21,7 +21,10 @@ const allowedOrigins = [
   'https://localhost:3000',
   // Add your deployment domains here
   process.env.FRONTEND_URL,
-  process.env.NEXT_PUBLIC_HOST_URL
+  process.env.NEXT_PUBLIC_HOST_URL,
+  // Add common Vercel patterns
+  /^https:\/\/.*\.vercel\.app$/,
+  /^https:\/\/.*\.vercel\.dev$/
 ].filter(Boolean); // Remove undefined values
 
 const corsOptions = {
@@ -32,13 +35,24 @@ const corsOptions = {
     // Allow localhost in development
     if (origin.includes('localhost')) return callback(null, true);
     
-    // Check if origin is in allowed list
+    // Check if origin is in allowed list (exact match)
     if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    
+    // Check if origin matches Vercel patterns
+    if (allowedOrigins.some(pattern => {
+      if (pattern instanceof RegExp) {
+        return pattern.test(origin);
+      }
+      return false;
+    })) {
       return callback(null, true);
     }
     
     // For production, you might want to be more restrictive
     if (process.env.NODE_ENV === 'production') {
+      console.log('CORS blocked origin:', origin);
       return callback(new Error('Not allowed by CORS'));
     } else {
       // In development, allow all origins
@@ -66,6 +80,7 @@ const calendarEventRoutes = require('./routes/calendarEvent');
 const dashboardRoutes = require('./routes/dashboard');
 const superAdminRoutes = require('./routes/superAdmin');
 const complianceRoutes = require('./routes/compliance');
+const emailRoutes = require('./routes/email');
 
 // Use routes
 app.use('/api/auth', userRoutes); // Auth routes (login, etc.)
@@ -81,6 +96,7 @@ app.use('/api/calendar-events', calendarEventRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/compliance', complianceRoutes);
+app.use('/api/email', emailRoutes);
 
 // Google OAuth endpoints
 app.get('/api/auth/google', (req, res) => {
