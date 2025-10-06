@@ -27,7 +27,8 @@ class GmailService {
       access_type: 'offline',
       scope: scopes,
       state: userId.toString(),
-      prompt: 'consent'
+      prompt: 'consent',
+      include_granted_scopes: true
     });
   }
 

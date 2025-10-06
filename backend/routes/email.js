@@ -288,7 +288,9 @@ router.get('/test-oauth', (req, res) => {
       authUrl: authUrl,
       clientId: process.env.GOOGLE_CLIENT_ID ? 'Set' : 'Missing',
       redirectUri: process.env.GOOGLE_REDIRECT_URI || 'Using default localhost',
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || 'development',
+      frontendUrl: process.env.FRONTEND_URL || 'Not set',
+      scopes: authUrl.includes('gmail.readonly') ? 'Includes Gmail scope' : 'Missing Gmail scope'
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
