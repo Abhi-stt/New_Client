@@ -54,7 +54,7 @@ interface ForwardingRule {
     hasAttachments?: boolean;
   };
   actions: {
-    forwardType: 'full' | 'summary';
+    forwardType: 'full';
     recipients: Array<{
       type: 'role' | 'email';
       value: string;
@@ -740,7 +740,7 @@ export default function EmailPage() {
                     <div>
                       <Label className="text-sm font-medium">Actions</Label>
                       <div className="space-y-1 text-sm text-muted-foreground">
-                        <p>Forward type: {rule.actions.forwardType}</p>
+                        <p>Forward type: Full Email</p>
                         <p>Recipients: {rule.actions.recipients.map(r => r.value).join(', ')}</p>
                         {rule.actions.addNote && (
                           <p>Note: {rule.actions.addNote}</p>
@@ -997,7 +997,7 @@ function CreateRuleForm({ rule, onSubmit, onCancel }: {
       hasAttachments: rule?.conditions.hasAttachments
     },
     actions: {
-      forwardType: rule?.actions.forwardType || 'full',
+      forwardType: 'full',
       recipients: rule?.actions.recipients || [{ type: 'role', value: 'manager' }],
       addNote: rule?.actions.addNote || ''
     }
@@ -1129,24 +1129,10 @@ function CreateRuleForm({ rule, onSubmit, onCancel }: {
       <div>
         <Label>Actions</Label>
         <div className="space-y-4 mt-2">
-          <div>
-            <Label htmlFor="forwardType">Forward Type</Label>
-            <Select
-              value={formData.actions.forwardType}
-              onValueChange={(value) => setFormData({
-                ...formData,
-                actions: { ...formData.actions, forwardType: value as 'full' | 'summary' }
-              })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="full">Full Email</SelectItem>
-                <SelectItem value="summary">Summary Only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div>
+              <Label>Forward Type</Label>
+              <p className="text-sm text-gray-700 mt-1">Full Email</p>
+            </div>
 
           <div>
             <Label>Recipients</Label>
@@ -1222,7 +1208,7 @@ function ForwardEmailForm({ email, onSubmit, onCancel }: {
   onCancel: () => void; 
 }) {
   const [formData, setFormData] = useState({
-    forwardType: 'full' as 'full' | 'summary',
+    forwardType: 'full',
     recipients: [{ type: 'role', value: 'manager' }],
     addNote: ''
   });
@@ -1274,24 +1260,10 @@ function ForwardEmailForm({ email, onSubmit, onCancel }: {
         </div>
       </div>
 
-      <div>
-        <Label>Forward Type</Label>
-        <Select
-          value={formData.forwardType}
-          onValueChange={(value) => setFormData({
-            ...formData,
-            forwardType: value as 'full' | 'summary'
-          })}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="full">Full Email</SelectItem>
-            <SelectItem value="summary">Summary Only</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        <div>
+          <Label>Forward Type</Label>
+          <p className="text-sm text-gray-700 mt-1">Full Email</p>
+        </div>
 
       <div>
         <Label>Recipients</Label>
