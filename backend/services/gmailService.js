@@ -4,7 +4,6 @@ const SyncedEmail = require('../schemas/SyncedEmail');
 const EmailForwardingRule = require('../schemas/EmailForwardingRule');
 const EmailAuditLog = require('../schemas/EmailAuditLog');
 const User = require('../schemas/User');
-const nodemailer = require('nodemailer');
 
 class GmailService {
   constructor() {
@@ -19,6 +18,7 @@ class GmailService {
   getAuthUrl(userId) {
     const scopes = [
       'https://www.googleapis.com/auth/gmail.readonly',
+      'https://www.googleapis.com/auth/gmail.send',
       'https://www.googleapis.com/auth/userinfo.email',
       'https://www.googleapis.com/auth/userinfo.profile'
     ];
@@ -235,6 +235,66 @@ class GmailService {
     };
   }
 
+  // Send email via Gmail API
+  async sendEmail(userId, { to, subject, htmlBody }) {
+    try {
+      const emailAccount = await EmailAccount.findOne({ userId, provider: 'gmail', isActive: true });
+      if (!emailAccount) {
+        throw new Error('No active Gmail account found');
+      }
+
+      // Check if we have Gmail send scope
+      if (!emailAccount.scope || !emailAccount.scope.includes('gmail.send')) {
+        throw new Error('Gmail send permission not available. Please reconnect your account with proper permissions.');
+      }
+
+      // Check if token needs refresh
+      if (new Date() >= emailAccount.tokenExpiry) {
+        await this.refreshAccessToken(emailAccount);
+      }
+
+      this.oauth2Client.setCredentials({
+        access_token: emailAccount.accessToken,
+        refresh_token: emailAccount.refreshToken
+      });
+
+      const gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
+
+      // Create email in RFC 2822 format
+      const utf8Subject = `=?utf-8?B?${Buffer.from(subject).toString('base64')}?=`;
+      const messageParts = [
+        `From: ${emailAccount.email}`,
+        `To: ${to}`,
+        'Content-Type: text/html; charset=utf-8',
+        'MIME-Version: 1.0',
+        `Subject: ${utf8Subject}`,
+        '',
+        htmlBody
+      ];
+      const message = messageParts.join('\n');
+
+      // Encode the message in base64url
+      const encodedMessage = Buffer.from(message)
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+      // Send the email
+      const result = await gmail.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          raw: encodedMessage
+        }
+      });
+
+      return result.data;
+    } catch (error) {
+      console.error('Error sending email via Gmail API:', error);
+      throw error;
+    }
+  }
+
   // Check and execute forwarding rules
   async checkForwardingRules(syncedEmail) {
     try {
@@ -300,45 +360,51 @@ class GmailService {
       
       if (recipients.length === 0) return;
 
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS
-        }
-      });
-
       const forwardType = rule.actions.forwardType;
       const subject = `FWD: ${email.subject}`;
       
       let body = '';
       if (forwardType === 'full') {
+        const emailContent = email.htmlBody || email.textBody || email.body || 'No content available';
         body = `
-          <p><strong>Forwarded Email:</strong></p>
-          <p><strong>From:</strong> ${email.sender}</p>
-          <p><strong>To:</strong> ${email.recipient}</p>
-          <p><strong>Date:</strong> ${email.receivedAt}</p>
-          <p><strong>Subject:</strong> ${email.subject}</p>
-          <hr>
-          <div>${email.body}</div>
+          <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+            <div style="background-color: #f5f5f5; padding: 20px; border-left: 4px solid #2563eb;">
+              <h3 style="margin: 0 0 10px 0; color: #2563eb;">Forwarded Email (Auto-Rule: ${rule.ruleName})</h3>
+              <p style="margin: 5px 0;"><strong>From:</strong> ${email.sender}</p>
+              <p style="margin: 5px 0;"><strong>To:</strong> ${email.recipient}</p>
+              <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(email.receivedAt).toLocaleString()}</p>
+              <p style="margin: 5px 0;"><strong>Subject:</strong> ${email.subject}</p>
+            </div>
+            <div style="padding: 20px; background-color: white; border: 1px solid #e5e7eb;">
+              ${emailContent}
+            </div>
+            ${rule.actions.addNote ? `<div style="background-color: #fef3c7; padding: 15px; margin-top: 10px; border-left: 4px solid #f59e0b;"><strong>Note:</strong> ${rule.actions.addNote}</div>` : ''}
+          </div>
         `;
       } else {
         body = `
-          <p><strong>Email Summary:</strong></p>
-          <p><strong>From:</strong> ${email.sender}</p>
-          <p><strong>Subject:</strong> ${email.subject}</p>
-          <p><strong>Date:</strong> ${email.receivedAt}</p>
-          <p><strong>Preview:</strong> ${email.bodyPreview}</p>
-          ${rule.actions.addNote ? `<p><strong>Note:</strong> ${rule.actions.addNote}</p>` : ''}
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background-color: #f5f5f5; padding: 20px; border-left: 4px solid #2563eb;">
+              <h3 style="margin: 0 0 10px 0; color: #2563eb;">Email Summary (Auto-Rule: ${rule.ruleName})</h3>
+              <p style="margin: 5px 0;"><strong>From:</strong> ${email.sender}</p>
+              <p style="margin: 5px 0;"><strong>Subject:</strong> ${email.subject}</p>
+              <p style="margin: 5px 0;"><strong>Date:</strong> ${new Date(email.receivedAt).toLocaleString()}</p>
+            </div>
+            <div style="padding: 20px; background-color: white; border: 1px solid #e5e7eb;">
+              <p><strong>Preview:</strong></p>
+              <p style="color: #6b7280; font-style: italic;">${email.bodyPreview || 'No preview available'}</p>
+            </div>
+            ${rule.actions.addNote ? `<div style="background-color: #fef3c7; padding: 15px; margin-top: 10px; border-left: 4px solid #f59e0b;"><strong>Note:</strong> ${rule.actions.addNote}</div>` : ''}
+          </div>
         `;
       }
 
+      // Send emails using Gmail API
       for (const recipient of recipients) {
-        await transporter.sendMail({
-          from: process.env.EMAIL_FROM,
+        await this.sendEmail(email.userId, {
           to: recipient,
           subject,
-          html: body
+          htmlBody: body
         });
       }
 

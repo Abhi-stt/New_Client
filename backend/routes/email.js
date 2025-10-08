@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const nodemailer = require('nodemailer');
 const gmailService = require('../services/gmailService');
 const EmailAccount = require('../schemas/EmailAccount');
 const EmailForwardingRule = require('../schemas/EmailForwardingRule');
@@ -345,15 +344,6 @@ router.post('/forward', async (req, res) => {
       return res.status(400).json({ error: 'No valid recipients found. Please check role names or email addresses.' });
     }
     
-    // Create transporter
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
-    
     // Prepare email content
     const subject = `FWD: ${email.subject}`;
     let body = '';
@@ -393,13 +383,12 @@ router.post('/forward', async (req, res) => {
       `;
     }
     
-    // Send emails
+    // Send emails using Gmail API
     for (const recipientEmail of recipientEmails) {
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM,
+      await gmailService.sendEmail(userId, {
         to: recipientEmail,
         subject,
-        html: body
+        htmlBody: body
       });
     }
     
