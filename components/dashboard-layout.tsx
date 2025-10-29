@@ -170,16 +170,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Top bar */}
         <div className="bg-white shadow-sm border-b border-gray-200">
           <div className="px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
-              <div className="flex items-center">
-                <h1 className="text-lg font-semibold text-gray-900">Welcome, {user?.name}</h1>
-                <Badge variant="secondary" className="ml-2 capitalize">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center min-w-0 flex-1">
+                <h1 className="text-sm sm:text-lg font-semibold text-gray-900 truncate">
+                  Welcome, {user?.name}
+                </h1>
+                <Badge variant="secondary" className="ml-2 capitalize hidden sm:inline-flex">
                   {user?.role?.replace("_", " ")}
                 </Badge>
               </div>
 
-              <div className="flex items-center space-x-4">
-                <Button variant="ghost" size="sm">
+              <div className="flex items-center space-x-2 sm:space-x-4">
+                <Button variant="ghost" size="sm" className="hidden sm:flex">
                   <Bell className="h-5 w-5" />
                 </Button>
 
@@ -203,6 +205,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">{user?.name}</p>
                         <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                        <Badge variant="secondary" className="capitalize w-fit mt-1 sm:hidden">
+                          {user?.role?.replace("_", " ")}
+                        </Badge>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />

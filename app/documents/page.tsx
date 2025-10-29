@@ -358,22 +358,24 @@ export default function DocumentsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Documents</h1>
-            <p className="text-gray-600">Manage and track all documents</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Documents</h1>
+            <p className="text-sm sm:text-base text-gray-600">Manage and track all documents</p>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
             {canUploadDocuments && (
-              <Button onClick={() => setShowUploadDialog(true)}>
+              <Button onClick={() => setShowUploadDialog(true)} className="w-full sm:w-auto">
                 <Upload className="mr-2 h-4 w-4" />
-                Upload Document
+                <span className="hidden sm:inline">Upload Document</span>
+                <span className="sm:hidden">Upload</span>
               </Button>
             )}
             {canRequestDocuments && (
-              <Button variant="outline" onClick={() => setShowRequestDialog(true)}>
+              <Button variant="outline" onClick={() => setShowRequestDialog(true)} className="w-full sm:w-auto">
                 <FileText className="mr-2 h-4 w-4" />
-                Request Document
+                <span className="hidden sm:inline">Request Document</span>
+                <span className="sm:hidden">Request</span>
               </Button>
             )}
           </div>
@@ -388,7 +390,7 @@ export default function DocumentsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -480,13 +482,13 @@ export default function DocumentsPage() {
             filteredDocuments.map((document: any) => (
               <Card key={document.id}>
                 <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <FileText className="h-8 w-8 text-blue-600" />
-                      <div>
-                        <h3 className="font-semibold">{document.name}</h3>
-                        <p className="text-sm text-gray-600">{document.description}</p>
-                        <div className="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+                    <div className="flex items-start space-x-4">
+                      <FileText className="h-8 w-8 text-blue-600 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-sm sm:text-base">{document.name}</h3>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-1">{document.description}</p>
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 mt-2 text-xs text-gray-500">
                           <span>Type: {document.type}</span>
                           <span>Client: {document.clientName}</span>
                           {document.firmName && <span>Firm: {document.firmName}</span>}
@@ -494,7 +496,7 @@ export default function DocumentsPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge
                         variant={
                           document.status === "approved"

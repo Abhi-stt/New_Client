@@ -122,14 +122,15 @@ export default function QueriesPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Queries</h1>
-            <p className="text-gray-600">Manage client queries and support tickets</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Queries</h1>
+            <p className="text-sm sm:text-base text-gray-600">Manage client queries and support tickets</p>
           </div>
-          <Button onClick={() => setShowCreateDialog(true)}>
+          <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
-            Create Query
+            <span className="hidden sm:inline">Create Query</span>
+            <span className="sm:hidden">New Query</span>
           </Button>
         </div>
 
@@ -142,7 +143,7 @@ export default function QueriesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -213,16 +214,16 @@ export default function QueriesPage() {
             filteredQueries.map((query: any) => (
               <Card key={query.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-4 sm:space-y-0">
                     <div className="flex items-start space-x-4 flex-1">
-                      <MessageSquare className="h-8 w-8 text-blue-600 mt-1" />
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-semibold">{query.title}</h3>
-                          <Badge variant="outline">{query.category}</Badge>
+                      <MessageSquare className="h-8 w-8 text-blue-600 mt-1 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="font-semibold text-sm sm:text-base">{query.title}</h3>
+                          <Badge variant="outline" className="text-xs">{query.category}</Badge>
                         </div>
-                        <p className="text-sm text-gray-600 mb-3">{query.description}</p>
-                        <div className="flex items-center space-x-4 text-xs text-gray-500">
+                        <p className="text-xs sm:text-sm text-gray-600 mb-3">{query.description}</p>
+                        <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-4 text-xs text-gray-500">
                           <span className="flex items-center">
                             <User className="mr-1 h-3 w-3" />
                             {query.createdBy}
@@ -236,12 +237,12 @@ export default function QueriesPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2 ml-4">
+                    <div className="flex flex-wrap items-center gap-2 sm:ml-4">
                       <Badge variant={getPriorityColor(query.priority)}>{query.priority}</Badge>
                       <Badge variant={getStatusColor(query.status)}>{query.status}</Badge>
                       {(user?.role === "admin" || user?.role === "manager" || user?.role === "team_member") && (
                         <Select value={query.status} onValueChange={(status) => updateQueryStatus(query.id, status)}>
-                          <SelectTrigger className="w-32">
+                          <SelectTrigger className="w-full sm:w-32">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -252,8 +253,9 @@ export default function QueriesPage() {
                           </SelectContent>
                         </Select>
                       )}
-                      <Button size="sm" variant="outline" onClick={() => setSelectedQuery(query)}>
-                        View Details
+                      <Button size="sm" variant="outline" onClick={() => setSelectedQuery(query)} className="w-full sm:w-auto">
+                        <span className="hidden sm:inline">View Details</span>
+                        <span className="sm:hidden">View</span>
                       </Button>
                     </div>
                   </div>

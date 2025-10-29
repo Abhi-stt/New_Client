@@ -292,25 +292,27 @@ export function SuperAdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Super Admin Dashboard</h1>
-          <p className="text-gray-600">Manage all users and monitor system activities</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Super Admin Dashboard</h1>
+          <p className="text-sm sm:text-base text-gray-600">Manage all users and monitor system activities</p>
         </div>
-        <div className="flex space-x-2">
-          <Button onClick={() => window.location.href = '/tasks'}>
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+          <Button onClick={() => window.location.href = '/tasks'} className="w-full sm:w-auto">
             <Calendar className="mr-2 h-4 w-4" />
-            Manage Tasks
+            <span className="hidden sm:inline">Manage Tasks</span>
+            <span className="sm:hidden">Tasks</span>
           </Button>
-          <Button onClick={() => setShowCreateUser(true)}>
+          <Button onClick={() => setShowCreateUser(true)} className="w-full sm:w-auto">
             <UserPlus className="mr-2 h-4 w-4" />
-            Create User
+            <span className="hidden sm:inline">Create User</span>
+            <span className="sm:hidden">Add User</span>
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -382,7 +384,7 @@ export function SuperAdminDashboard() {
               <CardDescription>Manage all system users</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col md:flex-row gap-4 mb-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
                 <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -394,34 +396,36 @@ export function SuperAdminDashboard() {
                     />
                   </div>
                 </div>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="Filter by role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="super_admin">Super Admin</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                    <SelectItem value="team_member">Team Member</SelectItem>
-                    <SelectItem value="client">Client</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
+                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Filter by role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="super_admin">Super Admin</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="team_member">Team Member</SelectItem>
+                      <SelectItem value="client">Client</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-40">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               {/* Users Table */}
-              <div className="border rounded-lg">
-                <Table>
+              <div className="border rounded-lg overflow-x-auto">
+                <Table className="min-w-full">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
@@ -458,7 +462,7 @@ export function SuperAdminDashboard() {
                           }
                         </TableCell>
                         <TableCell>
-                          <div className="flex space-x-2">
+                          <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2">
                             <Button
                               variant="outline"
                               size="sm"
@@ -466,8 +470,10 @@ export function SuperAdminDashboard() {
                                 setSelectedUser(user)
                                 setShowUserDetails(true)
                               }}
+                              className="w-full sm:w-auto"
                             >
                               <Eye className="h-4 w-4" />
+                              <span className="ml-1 sm:hidden">View</span>
                             </Button>
                             <Button
                               variant="outline"
@@ -479,8 +485,10 @@ export function SuperAdminDashboard() {
                                   description: "Edit user functionality will be available soon"
                                 })
                               }}
+                              className="w-full sm:w-auto"
                             >
                               <Edit className="h-4 w-4" />
+                              <span className="ml-1 sm:hidden">Edit</span>
                             </Button>
                             {user._id !== user?.id && (
                               <Button
@@ -488,13 +496,14 @@ export function SuperAdminDashboard() {
                                 size="sm"
                                 onClick={() => handleDeleteUser(user._id)}
                                 disabled={deletingUserId === user._id}
-                                className="text-red-600 hover:text-red-700 disabled:opacity-50"
+                                className="text-red-600 hover:text-red-700 disabled:opacity-50 w-full sm:w-auto"
                               >
                                 {deletingUserId === user._id ? (
                                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
                                 ) : (
                                   <Trash2 className="h-4 w-4" />
                                 )}
+                                <span className="ml-1 sm:hidden">Delete</span>
                               </Button>
                             )}
                           </div>
@@ -515,8 +524,8 @@ export function SuperAdminDashboard() {
               <CardDescription>Monitor user activities across the system</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="border rounded-lg">
-                <Table>
+              <div className="border rounded-lg overflow-x-auto">
+                <Table className="min-w-full">
                   <TableHeader>
                     <TableRow>
                       <TableHead>User</TableHead>

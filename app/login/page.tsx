@@ -41,18 +41,6 @@ export default function LoginPage() {
     setLoading(false)
   }
 
-  const demoCredentials = [
-    { role: "Admin", email: "admin@demo.com", password: "admin123" },
-    { role: "Manager", email: "manager@demo.com", password: "manager123" },
-    { role: "Team Member", email: "team@demo.com", password: "team123" },
-    { role: "Client", email: "client@demo.com", password: "client123" },
-  ]
-
-  const fillDemo = (email: string, password: string) => {
-    setEmail(email)
-    setPassword(password)
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -120,20 +108,6 @@ export default function LoginPage() {
                 {loading ? "Signing in..." : "Sign in"}
               </Button>
             </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Demo Credentials</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <div><strong>Admin:</strong> admin@demo.com / admin123</div>
-              <div><strong>Manager:</strong> manager@demo.com / manager123</div>
-              <div><strong>Team Member:</strong> team@demo.com / team123</div>
-              <div><strong>Client:</strong> client@demo.com / client123</div>
-            </div>
           </CardContent>
         </Card>
       </div>

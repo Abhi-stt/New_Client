@@ -104,12 +104,12 @@ export default function ClientsPage() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               {user?.role === 'manager' ? 'My Clients' : 'Client Management'}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm sm:text-base text-gray-600">
               {user?.role === 'manager' 
                 ? `Clients assigned to you by admin • ${Array.isArray(clients) ? clients.length : 0} client${(Array.isArray(clients) ? clients.length : 0) !== 1 ? 's' : ''}`
                 : 'Manage clients and their compliance requirements'
@@ -117,9 +117,10 @@ export default function ClientsPage() {
             </p>
           </div>
           {canManageClients && (
-            <Button onClick={() => setShowCreateDialog(true)}>
+            <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
-              Add Client
+              <span className="hidden sm:inline">Add Client</span>
+              <span className="sm:hidden">Add Client</span>
             </Button>
           )}
         </div>
@@ -133,7 +134,7 @@ export default function ClientsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
@@ -184,7 +185,7 @@ export default function ClientsPage() {
         </Card>
 
         {/* Clients Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredClients.length > 0 ? (
             filteredClients.map((client: any) => (
               <Card key={client.id} className="hover:shadow-md transition-shadow">
@@ -228,18 +229,21 @@ export default function ClientsPage() {
                     </div>
                   </div>
 
-                  <div className="flex space-x-2">
-                    <Button size="sm" variant="outline" onClick={() => handleClientMaster(client)}>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button size="sm" variant="outline" onClick={() => handleClientMaster(client)} className="w-full sm:w-auto">
                       <Calendar className="mr-2 h-4 w-4" />
-                      Master
+                      <span className="hidden sm:inline">Master</span>
+                      <span className="sm:hidden">Master</span>
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleViewDocuments(client)}>
+                    <Button size="sm" variant="outline" onClick={() => handleViewDocuments(client)} className="w-full sm:w-auto">
                       <FileText className="mr-2 h-4 w-4" />
-                      Documents
+                      <span className="hidden sm:inline">Documents</span>
+                      <span className="sm:hidden">Docs</span>
                     </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleViewTeam(client)}>
+                    <Button size="sm" variant="outline" onClick={() => handleViewTeam(client)} className="w-full sm:w-auto">
                       <Users className="mr-2 h-4 w-4" />
-                      Team
+                      <span className="hidden sm:inline">Team</span>
+                      <span className="sm:hidden">Team</span>
                     </Button>
                   </div>
                 </CardContent>

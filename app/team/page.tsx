@@ -138,10 +138,10 @@ export default function TeamPage() {
     <DashboardLayout>
       <div className="flex flex-col h-full max-h-screen overflow-hidden">
         {/* Fixed Header */}
-        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex justify-between items-center">
+        <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-xl sm:text-3xl font-bold text-gray-900">
                 {(() => {
                   const urlParams = new URLSearchParams(window.location.search)
                   const clientId = urlParams.get('clientId')
@@ -150,7 +150,7 @@ export default function TeamPage() {
                   return 'Team Management'
                 })()}
               </h1>
-              <p className="text-gray-600 mt-1">
+              <p className="text-sm sm:text-base text-gray-600 mt-1">
                 {(() => {
                   const urlParams = new URLSearchParams(window.location.search)
                   const clientId = urlParams.get('clientId')
@@ -164,16 +164,17 @@ export default function TeamPage() {
               </p>
             </div>
             {canManageTeam && (
-              <Button onClick={() => setShowCreateDialog(true)} size="lg">
+              <Button onClick={() => setShowCreateDialog(true)} size="lg" className="w-full sm:w-auto">
                 <Plus className="mr-2 h-5 w-5" />
-                Add Team Member
+                <span className="hidden sm:inline">Add Team Member</span>
+                <span className="sm:hidden">Add Member</span>
               </Button>
             )}
           </div>
         </div>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
           <div className="space-y-6">
             {/* Filters */}
             <Card className="shadow-sm">
@@ -184,7 +185,7 @@ export default function TeamPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
@@ -248,7 +249,7 @@ export default function TeamPage() {
                 )}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 {filteredMembers.length > 0 ? (
                   filteredMembers.map((member: any) => (
                     <Card key={member.id} className="hover:shadow-lg transition-all duration-200 hover:scale-[1.02] bg-white border border-gray-200">
@@ -344,7 +345,7 @@ export default function TeamPage() {
                           )}
                         </div>
 
-                        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-gray-100">
                           {canManage2FA && (
                             <Button size="sm" variant="outline" onClick={() => handleToggle2FA(member)} className="flex-1 min-w-[80px]">
                               <Shield className="mr-1 h-4 w-4" />

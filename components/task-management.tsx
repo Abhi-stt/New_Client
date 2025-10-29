@@ -277,19 +277,20 @@ export function TaskManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold">Task Management</h1>
-          <p className="text-gray-600">Manage your tasks and track progress</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Task Management</h1>
+          <p className="text-sm sm:text-base text-gray-600">Manage your tasks and track progress</p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
+        <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
-          Create Task
+          <span className="hidden sm:inline">Create Task</span>
+          <span className="sm:hidden">New Task</span>
         </Button>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
@@ -361,7 +362,7 @@ export function TaskManagement() {
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -374,7 +375,7 @@ export function TaskManagement() {
               </div>
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-40">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -388,7 +389,7 @@ export function TaskManagement() {
               </SelectContent>
             </Select>
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-full md:w-40">
+              <SelectTrigger className="w-full sm:w-40">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
@@ -407,10 +408,10 @@ export function TaskManagement() {
         {filteredTasks.map((task) => (
           <Card key={task.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
-              <div className="flex justify-between items-start">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start space-y-4 sm:space-y-0">
                 <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <h3 className="font-semibold text-lg">{task.title}</h3>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <h3 className="font-semibold text-base sm:text-lg">{task.title}</h3>
                     <Badge className={getStatusColor(task.status)}>
                       {getStatusIcon(task.status)}
                       <span className="ml-1">{task.status}</span>
@@ -434,7 +435,7 @@ export function TaskManagement() {
                     <p className="text-gray-600 mb-3">{task.description}</p>
                   )}
                   
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
+                  <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
                     <div className="flex items-center space-x-1">
                       <User className="h-4 w-4" />
                       <span>Assigned to: {task.assigneeId?.name || 'Unassigned'}</span>
@@ -476,7 +477,7 @@ export function TaskManagement() {
                   )}
                 </div>
                 
-                <div className="flex space-x-2">
+                <div className="flex flex-wrap gap-2">
                   {/* Task Details Button - For all users */}
                   <Button
                     size="sm"

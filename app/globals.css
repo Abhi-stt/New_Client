@@ -57,3 +57,58 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mobile-specific improvements */
+@layer utilities {
+  /* Ensure proper touch targets on mobile */
+  @media (max-width: 640px) {
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    
+    /* Better spacing for mobile cards */
+    .mobile-card {
+      @apply p-4;
+    }
+    
+    /* Responsive text sizing */
+    .mobile-text-sm {
+      @apply text-xs sm:text-sm;
+    }
+    
+    .mobile-text-base {
+      @apply text-sm sm:text-base;
+    }
+    
+    .mobile-text-lg {
+      @apply text-base sm:text-lg;
+    }
+    
+    .mobile-text-xl {
+      @apply text-lg sm:text-xl;
+    }
+    
+    /* Better button spacing on mobile */
+    .mobile-button-group {
+      @apply flex flex-col sm:flex-row gap-2 sm:gap-3;
+    }
+    
+    /* Responsive table wrapper */
+    .mobile-table-wrapper {
+      @apply overflow-x-auto -mx-4 sm:mx-0;
+    }
+    
+    /* Mobile-friendly form layouts */
+    .mobile-form-grid {
+      @apply grid grid-cols-1 sm:grid-cols-2 gap-4;
+    }
+  }
+  
+  /* Prevent horizontal scroll on mobile */
+  @media (max-width: 640px) {
+    body {
+      overflow-x: hidden;
+    }
+  }
+}

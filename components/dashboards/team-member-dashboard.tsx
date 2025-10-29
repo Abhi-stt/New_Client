@@ -60,25 +60,27 @@ export function TeamMemberDashboard() {
         </Alert>
       )}
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Dashboard</h1>
-          <p className="text-gray-600">Track your tasks and client work</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">My Dashboard</h1>
+          <p className="text-sm sm:text-base text-gray-600">Track your tasks and client work</p>
         </div>
-        <div className="flex space-x-2">
-          <Button onClick={() => window.location.href = '/tasks'}>
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+          <Button onClick={() => window.location.href = '/tasks'} className="w-full sm:w-auto">
             <CheckSquare className="mr-2 h-4 w-4" />
-            Manage Tasks
+            <span className="hidden sm:inline">Manage Tasks</span>
+            <span className="sm:hidden">Tasks</span>
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" className="w-full sm:w-auto">
             <Upload className="mr-2 h-4 w-4" />
-            Upload Document
+            <span className="hidden sm:inline">Upload Document</span>
+            <span className="sm:hidden">Upload</span>
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Assigned Tasks</CardTitle>

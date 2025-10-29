@@ -424,16 +424,17 @@ export default function EmailPage() {
   return (
     <DashboardLayout>
       <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-3xl font-bold">Email Integration</h1>
-          <p className="text-muted-foreground">Manage your Gmail integration and auto-forwarding rules</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Email Integration</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Manage your Gmail integration and auto-forwarding rules</p>
         </div>
         <div className="flex gap-2">
           {emailAccount.connected && (
-            <Button onClick={syncEmails} disabled={loading} variant="outline">
+            <Button onClick={syncEmails} disabled={loading} variant="outline" className="w-full sm:w-auto">
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Sync Emails
+              <span className="hidden sm:inline">Sync Emails</span>
+              <span className="sm:hidden">Sync</span>
             </Button>
           )}
         </div>
@@ -481,7 +482,7 @@ export default function EmailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-sm font-medium">Email</Label>
                       <p className="text-sm text-muted-foreground">{emailAccount.email}</p>
@@ -505,7 +506,7 @@ export default function EmailPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <Label htmlFor="sender">Sender</Label>
                       <Input
@@ -573,43 +574,79 @@ export default function EmailPage() {
                       <RefreshCw className="w-6 h-6 animate-spin" />
                     </div>
                   ) : emails.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p className="text-lg font-medium">No emails found</p>
-                      <p className="text-sm">Try syncing your emails or check your filters</p>
+                    <div className="text-center py-12 px-6">
+                      <div className="max-w-md mx-auto">
+                        <Mail className="w-16 h-16 mx-auto mb-4 text-blue-500 opacity-70" />
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                          Your Inbox is Empty
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-6">
+                          Click the <strong>"Sync Emails"</strong> button above to fetch your latest emails from Gmail and see them here in your inbox.
+                        </p>
+                        
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                          <div className="flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <div className="text-left">
+                              <p className="text-sm font-medium text-blue-900 mb-1">
+                                First time here?
+                              </p>
+                              <p className="text-xs text-blue-800">
+                                You need to manually sync your emails to view them in the portal. Click the sync button at the top of this page to get started.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button 
+                          onClick={syncEmails} 
+                          disabled={loading}
+                          size="lg"
+                          className="w-full max-w-xs mx-auto"
+                        >
+                          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                          Sync Emails Now
+                        </Button>
+                        
+                        {filters.sender || filters.subject || filters.isRead !== undefined ? (
+                          <p className="text-xs text-gray-500 mt-4">
+                            Or try clearing your filters above to see more results
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-1">
                       {emails.map((email) => (
                         <div
                           key={email._id}
-                          className={`group p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md hover:border-blue-300 ${
+                          className={`group p-3 sm:p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md hover:border-blue-300 ${
                             !email.isRead 
                               ? 'bg-blue-50 border-blue-200 shadow-sm' 
                               : 'bg-white border-gray-200 hover:bg-gray-50'
                           }`}
                           onClick={() => handleEmailClick(email)}
                         >
-                          <div className="flex items-start gap-3">
+                          <div className="flex items-start gap-2 sm:gap-3">
                             {/* Email Status Indicator */}
                             <div className="flex-shrink-0 mt-1">
                               {!email.isRead ? (
-                                <div className="w-3 h-3 bg-blue-500 rounded-full" />
+                                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-blue-500 rounded-full" />
                               ) : (
-                                <div className="w-3 h-3 bg-gray-300 rounded-full" />
+                                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gray-300 rounded-full" />
                               )}
                             </div>
 
                             {/* Email Content */}
                             <div className="flex-1 min-w-0">
                               {/* Header Row */}
-                              <div className="flex items-center justify-between mb-2">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 space-y-1 sm:space-y-0">
                                 <div className="flex items-center gap-2 min-w-0">
-                                  <span className="font-semibold text-sm text-gray-900 truncate">
+                                  <span className="font-semibold text-xs sm:text-sm text-gray-900 truncate">
                                     {email.sender}
                                   </span>
                                   {email.isForwarded && (
-                                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5">
                                       Forwarded
                                     </Badge>
                                   )}
@@ -626,20 +663,20 @@ export default function EmailPage() {
                               </div>
 
                               {/* Subject */}
-                              <h3 className={`font-medium text-sm mb-2 truncate ${
+                              <h3 className={`font-medium text-xs sm:text-sm mb-1 sm:mb-2 truncate ${
                                 !email.isRead ? 'text-gray-900' : 'text-gray-700'
                               }`}>
                                 {email.subject || '(No Subject)'}
                               </h3>
 
                               {/* Preview */}
-                              <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                              <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed">
                                 {email.bodyPreview || 'No preview available'}
                               </p>
                             </div>
 
                             {/* Action Indicators */}
-                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
+                            <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 sm:gap-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -647,11 +684,11 @@ export default function EmailPage() {
                                   e.stopPropagation();
                                   handleForwardEmail(email);
                                 }}
-                                className="h-8 w-8 p-0"
+                                className="h-6 w-6 sm:h-8 sm:w-8 p-0"
                               >
-                                <Forward className="w-4 h-4 text-gray-400 hover:text-blue-500" />
+                                <Forward className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 hover:text-blue-500" />
                               </Button>
-                              <MailOpen className="w-4 h-4 text-gray-400" />
+                              <MailOpen className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                             </div>
                           </div>
                         </div>
@@ -665,13 +702,14 @@ export default function EmailPage() {
         </TabsContent>
 
         <TabsContent value="rules" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Forwarding Rules</h2>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
+            <h2 className="text-xl sm:text-2xl font-bold">Forwarding Rules</h2>
             <Dialog open={showCreateRule} onOpenChange={setShowCreateRule}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="w-full sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Rule
+                  <span className="hidden sm:inline">Create Rule</span>
+                  <span className="sm:hidden">New Rule</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
@@ -716,7 +754,7 @@ export default function EmailPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <Label className="text-sm font-medium">Conditions</Label>
                       <div className="space-y-1 text-sm text-muted-foreground">
@@ -821,7 +859,7 @@ export default function EmailPage() {
       {/* Email View Modal */}
       {selectedEmail && (
         <Dialog open={showEmailModal} onOpenChange={setShowEmailModal}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden mx-4 sm:mx-0">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Mail className="w-5 h-5" />
@@ -832,19 +870,19 @@ export default function EmailPage() {
               <div className="space-y-4">
                 {/* Email Header */}
                 <div className="border-b pb-4">
-                  <div className="flex items-start justify-between mb-2">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 space-y-2 sm:space-y-0">
                     <div>
                       <p className="text-sm font-medium text-gray-900">From:</p>
-                      <p className="text-sm text-gray-700">{selectedEmail.sender}</p>
+                      <p className="text-sm text-gray-700 break-all">{selectedEmail.sender}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="sm:text-right">
                       <p className="text-sm font-medium text-gray-900">Date:</p>
                       <p className="text-sm text-gray-700">{formatDate(selectedEmail.receivedAt)}</p>
                     </div>
                   </div>
                   <div className="mt-2">
                     <p className="text-sm font-medium text-gray-900">Subject:</p>
-                    <p className="text-sm text-gray-700 font-medium">{selectedEmail.subject || '(No Subject)'}</p>
+                    <p className="text-sm text-gray-700 font-medium break-words">{selectedEmail.subject || '(No Subject)'}</p>
                   </div>
                   {selectedEmail.hasAttachments && (
                     <div className="mt-2 flex items-center gap-2">
@@ -895,8 +933,8 @@ export default function EmailPage() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-4 border-t">
-              <Button variant="outline" onClick={() => setShowEmailModal(false)}>
+            <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setShowEmailModal(false)} className="w-full sm:w-auto">
                 Close
               </Button>
               <Button 
@@ -906,6 +944,7 @@ export default function EmailPage() {
                   }
                   setShowEmailModal(false);
                 }}
+                className="w-full sm:w-auto"
               >
                 {selectedEmail.isRead ? 'Mark as Unread' : 'Mark as Read'}
               </Button>
@@ -1074,7 +1113,7 @@ function CreateRuleForm({ rule, onSubmit, onCancel }: {
 
       <div>
         <Label>Conditions</Label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
           <div>
             <Label htmlFor="senderEmail">Sender Email</Label>
             <Input
