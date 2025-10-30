@@ -1,0 +1,46 @@
+Task to do in the CA client Portal
+
+Remove this and share the credentials in text fromat in home screen in login
+
+Seperate features based on admin role, 1 admin = 1 CA company
+
+1 admin's workspace or data should not be shown to other admin or firms
+
+2 Seperate lists for managers, clients and team members for all features
+
+For Admin role changes
+
+The listing should be sorted by recent added first in the list.
+By Default the status should be pending.
+Status changing api is failing.
+For calnder Do it as full screen.
+Recurrence of the task should reflect in calender.
+Make filters live and active for calender module.
+Status for each member should be displayed
+Remove Client from filter for team management
+Report generation feature in excel format.
+Status for each client should be displayed
+Documents tap is not working on client management tab
+Team should show client's team under client management tab
+Make quick actions items clickable.
+Make dashboard live to update all changes.
+
+
+
+For Manager role changes
+
+Make dashboard dynamic
+Make quick actions items clickable.
+Assign task and review document button should work
+Show firms only when client is selected and if client has multiple firms otherwise dont' show the option.
+Add feature to change assignee or reassign task to other team member.
+In listing filter for Tasks, manager should only see team members.
+Enable assign client feature for manager role as well.
+Add feature for client to team members under manager role.
+Update manager role to view only team members under Team Management section. that are assigned to that manager.
+Assign feature for client is giving error.
+Newly created client is not visible  check for admin.
+Client is not getting created from admin role.
+Remove client creation part from manager role.
+manager should see clients that are assigned to him.
+Add client details screen, manager details screen and team member details screen to view all the information related to client, manager and team member, including documents, manager asigned, team member assigned, tasks, documents etc
