@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import { use } from "react";
+import { HOST_URL } from "@/lib/api";
 
 export default function DocumentUploadPage({ params }: { params: { token: string } }) {
   const { token } = use(params);
@@ -43,7 +44,7 @@ export default function DocumentUploadPage({ params }: { params: { token: string
       formData.append("files", file);
     });
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `http://localhost:5000/api/documents/upload/${token}`);
+    xhr.open("POST", `${HOST_URL}/api/documents/upload/${token}`);
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
         setProgress(Math.round((event.loaded / event.total) * 100));
