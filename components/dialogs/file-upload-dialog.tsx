@@ -373,23 +373,6 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
                     onChange={(e) => setFormData({ ...formData, googleSheetsUrl: e.target.value })}
                   />
                 )}
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="syncSharePoint"
-                    checked={formData.syncWithSharePoint}
-                    onCheckedChange={(checked) => setFormData({ ...formData, syncWithSharePoint: checked as boolean })}
-                  />
-                  <Label htmlFor="syncSharePoint">Sync with SharePoint</Label>
-                </div>
-
-                {formData.syncWithSharePoint && (
-                  <Input
-                    placeholder="SharePoint URL"
-                    value={formData.sharePointUrl}
-                    onChange={(e) => setFormData({ ...formData, sharePointUrl: e.target.value })}
-                  />
-                )}
               </div>
             </div>
           </div>

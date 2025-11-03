@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { DocumentRequestDialog } from "@/components/dialogs/document-request-dialog"
 import { FileUploadDialog } from "@/components/dialogs/file-upload-dialog"
-import { FileText, Upload, Download, Eye, Filter, Search, Lock, Unlock } from "lucide-react"
+import { FileText, Upload, Download, Eye, Filter, Search, Lock, Unlock, ExternalLink } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import dynamic from "next/dynamic"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -51,8 +51,29 @@ export default function DocumentsPage() {
     sharePointUrl: ""
   })
   const [syncLoading, setSyncLoading] = useState(false)
+  const [connectionStatus, setConnectionStatus] = useState({
+    google: { connected: false, email: null as string | null },
+    microsoft: { connected: false, email: null as string | null }
+  })
+  const [showSheetViewer, setShowSheetViewer] = useState(false)
+  const [sheetViewerUrl, setSheetViewerUrl] = useState<string | null>(null)
+  const [sheetViewerType, setSheetViewerType] = useState<'google' | 'sharepoint' | null>(null)
+  const [sheetViewerTitle, setSheetViewerTitle] = useState<string>("")
+  const [iframeLoading, setIframeLoading] = useState(true)
 
-  const openSyncDialog = (doc: any) => {
+  const fetchConnectionStatus = async () => {
+    try {
+      const response = await fetch(`${HOST_URL}/api/documents/sync-status?userId=${user?.id}`)
+      if (response.ok) {
+        const status = await response.json()
+        setConnectionStatus(status)
+      }
+    } catch (error) {
+      console.error("Error fetching connection status:", error)
+    }
+  }
+
+  const openSyncDialog = async (doc: any) => {
     setSyncDoc(doc)
     setSyncFields({
       syncWithGoogleSheets: doc.syncWithGoogleSheets || false,
@@ -61,6 +82,68 @@ export default function DocumentsPage() {
       sharePointUrl: doc.sharePointUrl || ""
     })
     setShowSyncDialog(true)
+    // Fetch connection status after a brief delay to ensure state is set
+    setTimeout(() => {
+      if (doc && user?.id) {
+        fetchConnectionStatus()
+      }
+    }, 100)
+  }
+
+  const handleConnectGoogle = async () => {
+    try {
+      const response = await fetch(`${HOST_URL}/api/auth/google?userId=${user?.id}`)
+      const data = await response.json()
+      if (data.authUrl) {
+        window.open(data.authUrl, '_blank', 'width=600,height=700')
+        // Poll for connection status after a delay
+        setTimeout(() => fetchConnectionStatus(), 3000)
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to connect Google account", variant: "destructive" })
+    }
+  }
+
+  const handleConnectSharePoint = async () => {
+    try {
+      const response = await fetch(`${HOST_URL}/api/auth/sharepoint?userId=${user?.id}`)
+      const data = await response.json()
+      if (data.authUrl) {
+        window.open(data.authUrl, '_blank', 'width=600,height=700')
+        // Poll for connection status after a delay
+        setTimeout(() => fetchConnectionStatus(), 3000)
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to connect Microsoft account", variant: "destructive" })
+    }
+  }
+
+  const handleDisconnectGoogle = async () => {
+    try {
+      await fetch(`${HOST_URL}/api/documents/disconnect-google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user?.id })
+      })
+      fetchConnectionStatus()
+      toast({ title: "Google account disconnected" })
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to disconnect Google account", variant: "destructive" })
+    }
+  }
+
+  const handleDisconnectSharePoint = async () => {
+    try {
+      await fetch(`${HOST_URL}/api/documents/disconnect-sharepoint`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user?.id })
+      })
+      fetchConnectionStatus()
+      toast({ title: "Microsoft account disconnected" })
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to disconnect Microsoft account", variant: "destructive" })
+    }
   }
 
   const handleLinkSync = async () => {
@@ -86,11 +169,30 @@ export default function DocumentsPage() {
     if (!syncDoc) return
     setSyncLoading(true)
     try {
-      await fetch(`${HOST_URL}/api/documents/${syncDoc.id}/sync`, { method: "POST" })
-      fetchDocuments()
-      toast({ title: "Manual sync triggered" })
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to sync document", variant: "destructive" })
+      const response = await fetch(`${HOST_URL}/api/documents/${syncDoc.id}/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user?.id })
+      })
+      
+      const result = await response.json()
+      
+      if (response.ok || response.status === 207) {
+        fetchDocuments()
+        if (result.errors && result.errors.length > 0) {
+          toast({ 
+            title: "Sync completed with errors", 
+            description: result.errors.map((e: any) => `${e.service}: ${e.error}`).join(', '),
+            variant: "destructive" 
+          })
+        } else {
+          toast({ title: "Sync completed successfully" })
+        }
+      } else {
+        throw new Error(result.error || "Sync failed")
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to sync document", variant: "destructive" })
     } finally {
       setSyncLoading(false)
     }
@@ -494,6 +596,68 @@ export default function DocumentsPage() {
                           {document.firmName && <span>Firm: {document.firmName}</span>}
                           <span>Uploaded: {document.uploadedDate}</span>
                         </div>
+                        {/* Sync URLs - Always visible if synced */}
+                        {(document.syncWithGoogleSheets || document.syncWithSharePoint) && (
+                          <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                            {document.syncWithGoogleSheets && document.googleSheetsUrl && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  // Convert to embeddable URL
+                                  const sheetIdMatch = document.googleSheetsUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
+                                  if (sheetIdMatch) {
+                                    const sheetId = sheetIdMatch[1]
+                                    // Extract gid if present for specific sheet tab
+                                    const gidMatch = document.googleSheetsUrl.match(/[#&]gid=(\d+)/)
+                                    const gid = gidMatch ? `&gid=${gidMatch[1]}` : ''
+                                    // Use /edit for full editing capabilities, looks exactly like Google Sheets
+                                    const embedUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit${gid ? `?${gid.replace('&', '')}` : ''}`
+                                    setSheetViewerUrl(embedUrl)
+                                    setSheetViewerType('google')
+                                    setSheetViewerTitle(`${document.name} - Google Sheet`)
+                                    setIframeLoading(true)
+                                    setShowSheetViewer(true)
+                                  } else {
+                                    // Fallback to original URL if can't parse
+                                    setSheetViewerUrl(document.googleSheetsUrl)
+                                    setSheetViewerType('google')
+                                    setSheetViewerTitle(`${document.name} - Google Sheet`)
+                                    setIframeLoading(true)
+                                    setShowSheetViewer(true)
+                                  }
+                                }}
+                                className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                View Google Sheet
+                              </button>
+                            )}
+                            {document.syncWithSharePoint && document.sharePointUrl && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  // For SharePoint, try to embed or open in viewer
+                                  // SharePoint URLs can be complex, so we'll use Office Online viewer
+                                  let embedUrl = document.sharePointUrl
+                                  // If it's a file URL, convert to Office Online viewer
+                                  if (embedUrl.includes('/Shared%20Documents/') || embedUrl.includes('/Shared Documents/')) {
+                                    // Keep original URL for iframe embedding
+                                    embedUrl = document.sharePointUrl
+                                  }
+                                  setSheetViewerUrl(embedUrl)
+                                  setSheetViewerType('sharepoint')
+                                  setSheetViewerTitle(`${document.name} - SharePoint`)
+                                  setIframeLoading(true)
+                                  setShowSheetViewer(true)
+                                }}
+                                className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                View SharePoint
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -520,7 +684,7 @@ export default function DocumentsPage() {
                         </Badge>
                       )}
                       {document.lastSyncedAt && (
-                        <span className="text-xs text-gray-500 ml-2">Last sync: {new Date(document.lastSyncedAt).toLocaleString()}</span>
+                        <span className="text-xs text-gray-500">Last sync: {new Date(document.lastSyncedAt).toLocaleString()}</span>
                       )}
                       {user?.role === "admin" && (
                         <Button
@@ -644,48 +808,288 @@ export default function DocumentsPage() {
 
         {showSyncDialog && syncDoc && (
           <Dialog open={showSyncDialog} onOpenChange={setShowSyncDialog}>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Sync Settings for {syncDoc.name}</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <label className="flex items-center space-x-2">
-                    <input type="checkbox" checked={syncFields.syncWithGoogleSheets} onChange={e => setSyncFields(f => ({ ...f, syncWithGoogleSheets: e.target.checked }))} />
-                    <span>Sync with Google Sheets</span>
-                  </label>
+              <div className="space-y-6">
+                {/* Show current sync status if document is already synced */}
+                {(syncDoc.syncWithGoogleSheets || syncDoc.syncWithSharePoint) && (
+                  <div className="bg-blue-50 p-3 rounded-md space-y-2">
+                    <p className="text-sm font-medium text-blue-900">Current Sync Configuration:</p>
+                    {syncDoc.syncWithGoogleSheets && syncDoc.googleSheetsUrl && (
+                      <div className="text-xs text-blue-800">
+                        <span className="font-medium">Google Sheets:</span>{' '}
+                        <button
+                          onClick={() => {
+                            const sheetIdMatch = syncDoc.googleSheetsUrl.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)
+                            if (sheetIdMatch) {
+                              const sheetId = sheetIdMatch[1]
+                              // Extract gid if present for specific sheet tab
+                              const gidMatch = syncDoc.googleSheetsUrl.match(/[#&]gid=(\d+)/)
+                              const gid = gidMatch ? `&gid=${gidMatch[1]}` : ''
+                              // Use /edit for full editing capabilities, looks exactly like Google Sheets
+                              const embedUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit${gid ? `?${gid.replace('&', '')}` : ''}`
+                              setSheetViewerUrl(embedUrl)
+                              setSheetViewerType('google')
+                              setSheetViewerTitle(`${syncDoc.name} - Google Sheet`)
+                              setIframeLoading(true)
+                              setShowSheetViewer(true)
+                            }
+                          }}
+                          className="underline hover:text-blue-900 cursor-pointer"
+                        >
+                          {syncDoc.googleSheetsUrl.length > 50 ? syncDoc.googleSheetsUrl.substring(0, 50) + '...' : syncDoc.googleSheetsUrl}
+                        </button>
+                      </div>
+                    )}
+                    {syncDoc.syncWithSharePoint && syncDoc.sharePointUrl && (
+                      <div className="text-xs text-blue-800">
+                        <span className="font-medium">SharePoint:</span>{' '}
+                        <button
+                          onClick={() => {
+                            setSheetViewerUrl(syncDoc.sharePointUrl)
+                            setSheetViewerType('sharepoint')
+                            setSheetViewerTitle(`${syncDoc.name} - SharePoint`)
+                            setIframeLoading(true)
+                            setShowSheetViewer(true)
+                          }}
+                          className="underline hover:text-blue-900 cursor-pointer"
+                        >
+                          {syncDoc.sharePointUrl.length > 50 ? syncDoc.sharePointUrl.substring(0, 50) + '...' : syncDoc.sharePointUrl}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Google Sheets Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <input 
+                        type="checkbox" 
+                        id="syncGoogleSheets"
+                        checked={syncFields.syncWithGoogleSheets} 
+                        onChange={e => setSyncFields(f => ({ ...f, syncWithGoogleSheets: e.target.checked }))} 
+                      />
+                      <label htmlFor="syncGoogleSheets" className="font-medium">Sync with Google Sheets</label>
+                    </div>
+                  </div>
+                  
+                  {/* Connection Status */}
+                  <div className="ml-6 text-sm">
+                    {connectionStatus.google.connected ? (
+                      <div className="flex items-center justify-between">
+                        <span className="text-green-600">
+                          ✓ Connected: {connectionStatus.google.email}
+                        </span>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={handleDisconnectGoogle}
+                          className="text-xs h-7"
+                        >
+                          Disconnect
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={handleConnectGoogle}
+                        className="text-xs"
+                      >
+                        Connect Google Account
+                      </Button>
+                    )}
+                  </div>
+
                   {syncFields.syncWithGoogleSheets && (
-                    <Input
-                      className="mt-2"
-                      placeholder="Google Sheets URL"
-                      value={syncFields.googleSheetsUrl}
-                      onChange={e => setSyncFields(f => ({ ...f, googleSheetsUrl: e.target.value }))}
-                    />
+                    <>
+                      <Input
+                        className="ml-6"
+                        placeholder="https://docs.google.com/spreadsheets/d/..."
+                        value={syncFields.googleSheetsUrl}
+                        onChange={e => setSyncFields(f => ({ ...f, googleSheetsUrl: e.target.value }))}
+                      />
+                      {!connectionStatus.google.connected && (
+                        <p className="ml-6 text-xs text-red-600">
+                          Please connect your Google account first
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
-                <div>
-                  <label className="flex items-center space-x-2">
-                    <input type="checkbox" checked={syncFields.syncWithSharePoint} onChange={e => setSyncFields(f => ({ ...f, syncWithSharePoint: e.target.checked }))} />
-                    <span>Sync with SharePoint</span>
-                  </label>
+
+                {/* SharePoint Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <input 
+                        type="checkbox" 
+                        id="syncSharePoint"
+                        checked={syncFields.syncWithSharePoint} 
+                        onChange={e => setSyncFields(f => ({ ...f, syncWithSharePoint: e.target.checked }))} 
+                      />
+                      <label htmlFor="syncSharePoint" className="font-medium">Sync with SharePoint</label>
+                    </div>
+                  </div>
+                  
+                  {/* Connection Status */}
+                  <div className="ml-6 text-sm">
+                    {connectionStatus.microsoft.connected ? (
+                      <div className="flex items-center justify-between">
+                        <span className="text-green-600">
+                          ✓ Connected: {connectionStatus.microsoft.email}
+                        </span>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={handleDisconnectSharePoint}
+                          className="text-xs h-7"
+                        >
+                          Disconnect
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={handleConnectSharePoint}
+                        className="text-xs"
+                      >
+                        Connect Microsoft Account
+                      </Button>
+                    )}
+                  </div>
+
                   {syncFields.syncWithSharePoint && (
-                    <Input
-                      className="mt-2"
-                      placeholder="SharePoint Folder URL"
-                      value={syncFields.sharePointUrl}
-                      onChange={e => setSyncFields(f => ({ ...f, sharePointUrl: e.target.value }))}
+                    <>
+                      <Input
+                        className="ml-6"
+                        placeholder="https://yourcompany.sharepoint.com/sites/..."
+                        value={syncFields.sharePointUrl}
+                        onChange={e => setSyncFields(f => ({ ...f, sharePointUrl: e.target.value }))}
+                      />
+                      {!connectionStatus.microsoft.connected && (
+                        <p className="ml-6 text-xs text-red-600">
+                          Please connect your Microsoft account first
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
+                <Button onClick={handleLinkSync} disabled={syncLoading} className="w-full sm:w-auto">
+                  {syncLoading ? "Saving..." : "Save Sync Settings"}
+                </Button>
+                <Button 
+                  onClick={handleManualSync} 
+                  variant="outline" 
+                  disabled={syncLoading || (!connectionStatus.google.connected && !connectionStatus.microsoft.connected)}
+                  className="w-full sm:w-auto"
+                >
+                  {syncLoading ? "Syncing..." : "Sync Now"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Embedded Sheet/SharePoint Viewer */}
+        {showSheetViewer && sheetViewerUrl && (
+          <Dialog open={showSheetViewer} onOpenChange={setShowSheetViewer}>
+            <DialogContent 
+              className="max-w-[98vw] max-h-[95vh] w-full h-full p-0 gap-0 overflow-hidden [&>button]:hidden"
+              style={{ 
+                transform: 'translate(-50%, -50%)',
+                left: '50%',
+                top: '50%',
+                borderRadius: '0.5rem',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              {/* Header with gradient background */}
+              <DialogHeader className="px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white border-b border-blue-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 rounded-lg p-2">
+                      {sheetViewerType === 'google' ? (
+                        <FileText className="h-5 w-5 text-white" />
+                      ) : (
+                        <FileText className="h-5 w-5 text-white" />
+                      )}
+                    </div>
+                    <DialogTitle className="text-white text-lg font-semibold m-0">
+                      {sheetViewerTitle}
+                    </DialogTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowSheetViewer(false)
+                        setIframeLoading(true)
+                      }}
+                      className="text-white hover:bg-white/10"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              </DialogHeader>
+              
+              {/* Content area with iframe */}
+              <div className="relative w-full flex-1 bg-gray-100" style={{ height: 'calc(95vh - 80px)', minHeight: '600px' }}>
+                {/* Loading overlay */}
+                {iframeLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                      <p className="text-sm text-gray-600 font-medium">Loading {sheetViewerType === 'google' ? 'Google Sheet' : 'SharePoint'}...</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Iframe container - Full Google Sheets interface */}
+                <div className="w-full h-full bg-white rounded-b-lg overflow-hidden shadow-inner">
+                  {sheetViewerType === 'google' ? (
+                    <iframe
+                      src={sheetViewerUrl}
+                      className="w-full h-full border-0"
+                      title="Google Sheet Editor"
+                      allow="clipboard-read; clipboard-write; fullscreen"
+                      allowFullScreen
+                      sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation-by-user-activation"
+                      onLoad={() => setIframeLoading(false)}
+                      style={{ 
+                        display: iframeLoading ? 'none' : 'block',
+                        minHeight: '600px',
+                        width: '100%',
+                        height: '100%'
+                      }}
+                    />
+                  ) : (
+                    <iframe
+                      src={sheetViewerUrl}
+                      className="w-full h-full border-0"
+                      title="SharePoint Viewer"
+                      allow="clipboard-read; clipboard-write; fullscreen"
+                      allowFullScreen
+                      onLoad={() => setIframeLoading(false)}
+                      style={{ 
+                        display: iframeLoading ? 'none' : 'block',
+                        minHeight: '600px',
+                        width: '100%',
+                        height: '100%'
+                      }}
                     />
                   )}
                 </div>
               </div>
-              <DialogFooter>
-                <Button onClick={handleLinkSync} disabled={syncLoading}>
-                  {syncLoading ? "Saving..." : "Save Sync Settings"}
-                </Button>
-                <Button onClick={handleManualSync} variant="outline" disabled={syncLoading}>
-                  {syncLoading ? "Syncing..." : "Sync Now"}
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
         )}

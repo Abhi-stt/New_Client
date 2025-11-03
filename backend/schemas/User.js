@@ -18,6 +18,21 @@ const UserSchema = new mongoose.Schema({
   lastLoginAt: { type: Date },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // Which admin domain this user belongs to
+  // OAuth Integration Tokens
+  googleOAuth: {
+    accessToken: { type: String },
+    refreshToken: { type: String },
+    tokenExpiry: { type: Date },
+    connectedEmail: { type: String },
+    connectedAt: { type: Date }
+  },
+  microsoftOAuth: {
+    accessToken: { type: String },
+    refreshToken: { type: String },
+    tokenExpiry: { type: Date },
+    connectedEmail: { type: String },
+    connectedAt: { type: Date }
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);  

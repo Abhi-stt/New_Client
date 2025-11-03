@@ -1,10 +1,13 @@
 const express = require('express');
 const multer = require('multer');
 const Document = require('../schemas/Document');
+const User = require('../schemas/User');
 const router = express.Router();
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { getUserAdminId, buildAccessFilter, setOwnershipFields } = require('../utils/accessControl');
+const googleSheetsService = require('../services/googleSheetsService');
+const sharePointService = require('../services/sharePointService');
 require('dotenv').config();
 
 // Configure Multer storage (this stores files in 'uploads/' folder)
@@ -116,7 +119,14 @@ router.get('/', async (req, res) => {
       clientName: doc.clientId?.name || 'Unknown Client',
       firmName: doc.firmId?.name || null,
       uploadedBy: doc.uploadedBy?.name || 'Unknown User',
-      uploadedDate: doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : 'Unknown'
+      uploadedDate: doc.createdAt ? new Date(doc.createdAt).toLocaleDateString() : 'Unknown',
+      // Include sync URLs so they're visible in the UI
+      syncWithGoogleSheets: doc.syncWithGoogleSheets || false,
+      googleSheetsUrl: doc.googleSheetsUrl || null,
+      syncWithSharePoint: doc.syncWithSharePoint || false,
+      sharePointUrl: doc.sharePointUrl || null,
+      syncStatus: doc.syncStatus || null,
+      lastSyncedAt: doc.lastSyncedAt || null
     })));
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -201,6 +211,55 @@ router.post('/upload', upload.array('files'), async (req, res) => {
     });
     
     await document.save();
+    
+    // Auto-sync if enabled
+    if ((document.syncWithGoogleSheets && document.googleSheetsUrl) || 
+        (document.syncWithSharePoint && document.sharePointUrl)) {
+      try {
+        const user = await User.findById(userId);
+        if (user) {
+          // Sync to Google Sheets
+          if (document.syncWithGoogleSheets && document.googleSheetsUrl && user.googleOAuth?.accessToken) {
+            try {
+              await googleSheetsService.appendDocumentRow(user, User, document, document.googleSheetsUrl);
+              document.syncStatus = 'synced';
+              document.lastSyncedAt = new Date();
+              await document.save();
+            } catch (syncError) {
+              console.error('Auto-sync to Google Sheets failed:', syncError);
+              document.syncStatus = 'error';
+              await document.save();
+            }
+          }
+          
+          // Sync to SharePoint
+          if (document.syncWithSharePoint && document.sharePointUrl && user.microsoftOAuth?.accessToken) {
+            try {
+              await sharePointService.syncDocumentMetadata(user, User, document, document.sharePointUrl);
+              if (document.files && document.files.length > 0 && document.files[0].url) {
+                const filePath = document.files[0].url.replace(/^\//, '');
+                await sharePointService.uploadDocumentToSharePoint(user, User, document, document.sharePointUrl, filePath);
+              }
+              if (document.syncStatus !== 'synced') {
+                document.syncStatus = 'synced';
+                document.lastSyncedAt = new Date();
+                await document.save();
+              }
+            } catch (syncError) {
+              console.error('Auto-sync to SharePoint failed:', syncError);
+              if (document.syncStatus !== 'synced') {
+                document.syncStatus = 'error';
+                await document.save();
+              }
+            }
+          }
+        }
+      } catch (autoSyncError) {
+        console.error('Auto-sync error (non-blocking):', autoSyncError);
+        // Don't fail the upload if sync fails
+      }
+    }
+    
     res.status(201).json({
       ...document.toObject(),
       id: document._id,
@@ -356,6 +415,61 @@ router.get('/upload/:token', async (req, res) => {
   }
 });
 
+// Get user's OAuth connection status
+router.get('/sync-status', async (req, res) => {
+  try {
+    const userId = req.query.userId || req.headers['x-user-id']
+    if (!userId) return res.status(400).json({ error: 'User ID required' })
+
+    const user = await User.findById(userId)
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    res.json({
+      google: {
+        connected: !!(user.googleOAuth?.accessToken),
+        email: user.googleOAuth?.connectedEmail || null
+      },
+      microsoft: {
+        connected: !!(user.microsoftOAuth?.accessToken),
+        email: user.microsoftOAuth?.connectedEmail || null
+      }
+    })
+  } catch (err) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// Disconnect OAuth accounts
+router.post('/disconnect-google', async (req, res) => {
+  try {
+    const userId = req.body.userId || req.headers['x-user-id']
+    if (!userId) return res.status(400).json({ error: 'User ID required' })
+
+    const user = await User.findById(userId)
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    await googleSheetsService.disconnect(user)
+    res.json({ success: true, message: 'Google account disconnected' })
+  } catch (err) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+router.post('/disconnect-sharepoint', async (req, res) => {
+  try {
+    const userId = req.body.userId || req.headers['x-user-id']
+    if (!userId) return res.status(400).json({ error: 'User ID required' })
+
+    const user = await User.findById(userId)
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    await sharePointService.disconnect(user)
+    res.json({ success: true, message: 'Microsoft account disconnected' })
+  } catch (err) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
 // Link/unlink Google Sheets or SharePoint to a document
 router.patch('/:id/link-sync', async (req, res) => {
   try {
@@ -365,8 +479,11 @@ router.patch('/:id/link-sync', async (req, res) => {
     if ('syncWithSharePoint' in req.body) update.syncWithSharePoint = req.body.syncWithSharePoint
     if ('sharePointUrl' in req.body) update.sharePointUrl = req.body.sharePointUrl
     if (Object.keys(update).length === 0) return res.status(400).json({ error: 'No sync fields provided' })
+    
     update.syncStatus = 'pending'
     const doc = await Document.findByIdAndUpdate(req.params.id, update, { new: true })
+      .populate('clientId', 'name')
+      .populate('firmId', 'name')
     if (!doc) return res.status(404).json({ error: 'Document not found' })
     res.json(doc)
   } catch (err) {
@@ -374,17 +491,105 @@ router.patch('/:id/link-sync', async (req, res) => {
   }
 })
 
-// Trigger manual sync (placeholder logic)
+// Trigger manual sync - Actual implementation
 router.post('/:id/sync', async (req, res) => {
   try {
+    const userId = req.body.userId || req.headers['x-user-id']
+    if (!userId) return res.status(400).json({ error: 'User ID required' })
+
     const doc = await Document.findById(req.params.id)
+      .populate('clientId', 'name')
     if (!doc) return res.status(404).json({ error: 'Document not found' })
-    // Placeholder: simulate sync
-    doc.syncStatus = 'synced'
-    doc.lastSyncedAt = new Date()
+
+    const user = await User.findById(userId)
+    if (!user) return res.status(404).json({ error: 'User not found' })
+
+    const syncResults = {
+      googleSheets: null,
+      sharePoint: null,
+      errors: []
+    }
+
+    // Sync to Google Sheets
+    if (doc.syncWithGoogleSheets && doc.googleSheetsUrl) {
+      try {
+        if (!user.googleOAuth?.accessToken) {
+          throw new Error('Google account not connected')
+        }
+        // Ensure client is populated
+        if (!doc.clientId?.name && doc.clientId) {
+          await doc.populate('clientId', 'name')
+        }
+        const result = await googleSheetsService.appendDocumentRow(user, User, doc, doc.googleSheetsUrl)
+        syncResults.googleSheets = result
+        doc.syncStatus = 'synced'
+        doc.lastSyncedAt = new Date()
+      } catch (error) {
+        console.error('Google Sheets sync error:', error)
+        syncResults.errors.push({ service: 'Google Sheets', error: error.message })
+        doc.syncStatus = 'error'
+      }
+    }
+
+    // Sync to SharePoint
+    if (doc.syncWithSharePoint && doc.sharePointUrl) {
+      try {
+        if (!user.microsoftOAuth?.accessToken) {
+          throw new Error('Microsoft account not connected')
+        }
+        
+        // For SharePoint, we'll sync metadata only (can be extended to upload files)
+        const metadataResult = await sharePointService.syncDocumentMetadata(user, User, doc, doc.sharePointUrl)
+        
+        // If document has files, upload them too
+        if (doc.files && doc.files.length > 0 && doc.files[0].url) {
+          const filePath = doc.files[0].url.replace(/^\//, '') // Remove leading slash
+          try {
+            await sharePointService.uploadDocumentToSharePoint(user, User, doc, doc.sharePointUrl, filePath)
+          } catch (uploadError) {
+            console.error('SharePoint file upload error:', uploadError)
+            // Metadata sync succeeded, so partial success
+            syncResults.sharePoint = {
+              ...metadataResult,
+              fileUploadWarning: uploadError.message
+            }
+          }
+        } else {
+          syncResults.sharePoint = metadataResult
+        }
+        
+        if (doc.syncStatus !== 'error') {
+          doc.syncStatus = 'synced'
+          doc.lastSyncedAt = new Date()
+        }
+      } catch (error) {
+        console.error('SharePoint sync error:', error)
+        syncResults.errors.push({ service: 'SharePoint', error: error.message })
+        if (doc.syncStatus !== 'synced') {
+          doc.syncStatus = 'error'
+        }
+      }
+    }
+
     await doc.save()
-    res.json({ message: 'Sync completed', syncStatus: doc.syncStatus, lastSyncedAt: doc.lastSyncedAt })
+
+    if (syncResults.errors.length > 0) {
+      return res.status(207).json({ // 207 Multi-Status
+        message: 'Sync completed with errors',
+        syncStatus: doc.syncStatus,
+        lastSyncedAt: doc.lastSyncedAt,
+        results: syncResults
+      })
+    }
+
+    res.json({
+      message: 'Sync completed successfully',
+      syncStatus: doc.syncStatus,
+      lastSyncedAt: doc.lastSyncedAt,
+      results: syncResults
+    })
   } catch (err) {
+    console.error('Sync error:', err)
     res.status(400).json({ error: err.message })
   }
 })

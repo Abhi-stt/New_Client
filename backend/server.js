@@ -9,9 +9,9 @@ const Document = require('./schemas/Document');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 
-// In-memory token storage for demo (replace with DB in production)
-let googleTokens = null;
-let microsoftTokens = null;
+const User = require('./schemas/User');
+const googleSheetsService = require('./services/googleSheetsService');
+const sharePointService = require('./services/sharePointService');
 
 const app = express();
 
@@ -98,66 +98,149 @@ app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/compliance', complianceRoutes);
 app.use('/api/email', emailRoutes);
 
-// Google OAuth endpoints
-app.get('/api/auth/google', (req, res) => {
-  const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID,
-    redirect_uri: process.env.GOOGLE_REDIRECT_URI,
-    response_type: 'code',
-    scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly',
-    access_type: 'offline',
-    prompt: 'consent',
-  });
-  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
-});
-
-app.get('/api/auth/google/callback', async (req, res) => {
-  const code = req.query.code;
+// Google OAuth endpoints - User-specific
+app.get('/api/auth/google', async (req, res) => {
   try {
-    const response = await axios.post('https://oauth2.googleapis.com/token', {
-      code,
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: process.env.GOOGLE_REDIRECT_URI,
-      grant_type: 'authorization_code',
-    });
-    googleTokens = response.data;
-    res.send('Google Drive/Sheets connected! You can close this window.');
+    const userId = req.query.userId;
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const authUrl = googleSheetsService.getAuthUrl(userId);
+    res.json({ authUrl });
   } catch (err) {
-    res.status(500).send('Google OAuth failed: ' + err.message);
+    res.status(500).json({ error: 'Failed to generate Google OAuth URL: ' + err.message });
   }
 });
 
-// Microsoft OAuth endpoints
-app.get('/api/auth/sharepoint', (req, res) => {
-  const params = new URLSearchParams({
-    client_id: process.env.MS_CLIENT_ID,
-    response_type: 'code',
-    redirect_uri: process.env.MS_REDIRECT_URI,
-    response_mode: 'query',
-    scope: 'https://graph.microsoft.com/Files.Read.All offline_access',
-    prompt: 'consent',
-  });
-  res.redirect(`https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`);
+app.get('/api/auth/google/callback', async (req, res) => {
+  try {
+    const code = req.query.code;
+    const state = req.query.state; // Contains userId
+    const error = req.query.error;
+
+    if (error) {
+      return res.send(`
+        <html>
+          <body>
+            <h2>Authorization Cancelled</h2>
+            <p>You cancelled the Google authorization. You can close this window.</p>
+            <script>setTimeout(() => window.close(), 3000);</script>
+          </body>
+        </html>
+      `);
+    }
+
+    if (!code || !state) {
+      return res.status(400).send(`
+        <html>
+          <body>
+            <h2>Authorization Failed</h2>
+            <p>Missing authorization code or user ID. You can close this window.</p>
+            <script>setTimeout(() => window.close(), 3000);</script>
+          </body>
+        </html>
+      `);
+    }
+
+    const userId = state;
+    const result = await googleSheetsService.exchangeCodeForTokens(code, userId, User);
+
+    res.send(`
+      <html>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+          <h2 style="color: green;">✓ Google Account Connected Successfully!</h2>
+          <p>Connected as: <strong>${result.email}</strong></p>
+          <p>You can close this window and return to the application.</p>
+          <script>setTimeout(() => window.close(), 2000);</script>
+        </body>
+      </html>
+    `);
+  } catch (err) {
+    console.error('Google OAuth callback error:', err);
+    res.status(500).send(`
+      <html>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+          <h2 style="color: red;">Authorization Failed</h2>
+          <p>${err.message}</p>
+          <p>You can close this window and try again.</p>
+          <script>setTimeout(() => window.close(), 5000);</script>
+        </body>
+      </html>
+    `);
+  }
+});
+
+// Microsoft OAuth endpoints - User-specific
+app.get('/api/auth/sharepoint', async (req, res) => {
+  try {
+    const userId = req.query.userId;
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const authUrl = sharePointService.getAuthUrl(userId);
+    res.json({ authUrl });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate Microsoft OAuth URL: ' + err.message });
+  }
 });
 
 app.get('/api/auth/sharepoint/callback', async (req, res) => {
-  const code = req.query.code;
   try {
-    const response = await axios.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', new URLSearchParams({
-      client_id: process.env.MS_CLIENT_ID,
-      client_secret: process.env.MS_CLIENT_SECRET,
-      code,
-      redirect_uri: process.env.MS_REDIRECT_URI,
-      grant_type: 'authorization_code',
-      scope: 'https://graph.microsoft.com/Files.Read.All offline_access',
-    }), {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    });
-    microsoftTokens = response.data;
-    res.send('SharePoint connected! You can close this window.');
+    const code = req.query.code;
+    const state = req.query.state; // Contains userId
+    const error = req.query.error;
+
+    if (error) {
+      return res.send(`
+        <html>
+          <body>
+            <h2>Authorization Cancelled</h2>
+            <p>You cancelled the Microsoft authorization. You can close this window.</p>
+            <script>setTimeout(() => window.close(), 3000);</script>
+          </body>
+        </html>
+      `);
+    }
+
+    if (!code || !state) {
+      return res.status(400).send(`
+        <html>
+          <body>
+            <h2>Authorization Failed</h2>
+            <p>Missing authorization code or user ID. You can close this window.</p>
+            <script>setTimeout(() => window.close(), 3000);</script>
+          </body>
+        </html>
+      `);
+    }
+
+    const userId = state;
+    const result = await sharePointService.exchangeCodeForTokens(code, userId, User);
+
+    res.send(`
+      <html>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+          <h2 style="color: green;">✓ Microsoft Account Connected Successfully!</h2>
+          <p>Connected as: <strong>${result.email}</strong></p>
+          <p>You can close this window and return to the application.</p>
+          <script>setTimeout(() => window.close(), 2000);</script>
+        </body>
+      </html>
+    `);
   } catch (err) {
-    res.status(500).send('Microsoft OAuth failed: ' + err.message);
+    console.error('Microsoft OAuth callback error:', err);
+    res.status(500).send(`
+      <html>
+        <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+          <h2 style="color: red;">Authorization Failed</h2>
+          <p>${err.message}</p>
+          <p>You can close this window and try again.</p>
+          <script>setTimeout(() => window.close(), 5000);</script>
+        </body>
+      </html>
+    `);
   }
 });
 
