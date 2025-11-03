@@ -19,12 +19,15 @@ const allowedOrigins = [
   'https://new-client-kohl.vercel.app',
   'http://localhost:3000',
   'https://localhost:3000',
+  'https://ca-client-portal.onrender.com',
   // Add your deployment domains here
   process.env.FRONTEND_URL,
   process.env.NEXT_PUBLIC_HOST_URL,
   // Add common Vercel patterns
   /^https:\/\/.*\.vercel\.app$/,
-  /^https:\/\/.*\.vercel\.dev$/
+  /^https:\/\/.*\.vercel\.dev$/,
+  // Add Render.com patterns
+  /^https:\/\/.*\.onrender\.com$/
 ].filter(Boolean); // Remove undefined values
 
 const corsOptions = {
@@ -66,6 +69,30 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions)); // <-- This line is key!
 
 app.use(express.json());
+
+// Root route - Health check and API info
+app.get('/', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    message: 'Client Portal API is running',
+    version: '1.0.0',
+    backendUrl: 'https://ca-client-portal.onrender.com',
+    endpoints: {
+      auth: '/api/users/login',
+      docs: '/api/documents',
+      health: '/api/health'
+    }
+  });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
 
 // Import routes
 const userRoutes = require('./routes/user');
