@@ -108,6 +108,7 @@ const dashboardRoutes = require('./routes/dashboard');
 const superAdminRoutes = require('./routes/superAdmin');
 const complianceRoutes = require('./routes/compliance');
 const emailRoutes = require('./routes/email');
+const demoRoutes = require('./routes/demo');
 
 // Use routes
 app.use('/api/auth', userRoutes); // Auth routes (login, etc.)
@@ -124,6 +125,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/compliance', complianceRoutes);
 app.use('/api/email', emailRoutes);
+app.use('/api/demo', demoRoutes);
 
 // Google OAuth endpoints - User-specific
 app.get('/api/auth/google', async (req, res) => {
