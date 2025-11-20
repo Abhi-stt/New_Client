@@ -1,6 +1,7 @@
 const express = require('express');
 const User = require('../schemas/User');
 const UserActivity = require('../schemas/UserActivity');
+const DemoRequest = require('../schemas/DemoRequest');
 const { validateUser, sanitizeInput, requireSuperAdmin } = require('../middleware/validation');
 const { checkEmailUnique } = require('../utils/validations');
 const router = express.Router();
@@ -244,6 +245,68 @@ router.get('/users/:userId/details', async (req, res) => {
       .limit(20);
 
     res.json({ user, activities });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all demo requests (super admin only)
+router.get('/demo-requests', async (req, res) => {
+  try {
+    const { status, page = 1, limit = 50 } = req.query;
+    
+    const query = {};
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    const requests = await DemoRequest.find(query)
+      .populate('contactedBy', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec();
+
+    const total = await DemoRequest.countDocuments(query);
+
+    res.json({
+      requests,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      total
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update demo request status (super admin only)
+router.put('/demo-requests/:requestId', async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const { userId: updatedBy } = req.query;
+    const { status, notes } = req.body;
+
+    const updateData = {};
+    if (status) updateData.status = status;
+    if (notes !== undefined) updateData.notes = notes;
+    
+    if (status === 'contacted' || status === 'completed') {
+      updateData.contactedBy = updatedBy;
+      updateData.contactedAt = new Date();
+    }
+
+    const request = await DemoRequest.findByIdAndUpdate(
+      requestId,
+      updateData,
+      { new: true }
+    ).populate('contactedBy', 'name email');
+
+    if (!request) {
+      return res.status(404).json({ error: 'Demo request not found' });
+    }
+
+    res.json({ message: 'Demo request updated successfully', request });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

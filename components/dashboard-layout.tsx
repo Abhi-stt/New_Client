@@ -93,11 +93,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigationItems = getNavigationItems()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50/40 via-purple-50/30 to-violet-50/40">
       {/* Mobile sidebar */}
       <div className={cn("fixed inset-0 flex z-40 md:hidden", sidebarOpen ? "block" : "hidden")}>
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
-        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white">
+        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white/95 backdrop-blur-xl">
           <div className="absolute top-0 right-0 -mr-12 pt-2">
             <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)} className="text-white">
               <X className="h-6 w-6" />
@@ -105,8 +105,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
             <div className="flex-shrink-0 flex items-center px-4">
-              <Shield className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-semibold">Client Portal</span>
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#6366F1] to-[#A855F7] flex items-center justify-center shadow-lg shadow-[#6366F1]/20">
+                <Shield className="h-5 w-5 text-white" />
+              </div>
+              <span className="ml-2 text-xl font-bold text-[#0F172A]">Client Portal</span>
             </div>
             <nav className="mt-5 px-2 space-y-1">
               {navigationItems.map((item) => (
@@ -114,10 +116,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    "group flex items-center px-2 py-2 text-base font-medium rounded-md",
+                    "group flex items-center px-2 py-2 text-base font-medium rounded-md transition-colors",
                     pathname === item.href
-                      ? "bg-blue-100 text-blue-900"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                      ? "bg-gradient-to-r from-[#6366F1]/20 to-[#A855F7]/20 text-[#6366F1] border-l-2 border-[#6366F1]"
+                      : "text-[#475569] hover:bg-white/50 hover:text-[#0F172A]",
                   )}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -131,12 +133,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        <div className="flex-1 flex flex-col min-h-0 border-r border-gray-200 bg-white">
+        <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
+        <div className="flex-1 flex flex-col min-h-0 border-r border-slate-200/80 bg-white/80 backdrop-blur-xl">
           <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
             <div className="flex items-center flex-shrink-0 px-4">
-              <Shield className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-semibold">Client Portal</span>
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#6366F1] to-[#A855F7] flex items-center justify-center shadow-lg shadow-[#6366F1]/20">
+                <Shield className="h-5 w-5 text-white" />
+              </div>
+              <span className="ml-2 text-xl font-bold text-[#0F172A]">Client Portal</span>
             </div>
             <nav className="mt-5 flex-1 px-2 space-y-1">
               {navigationItems.map((item) => (
@@ -144,10 +148,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    "group flex items-center px-2 py-2 text-sm font-medium rounded-md",
+                    "group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors",
                     pathname === item.href
-                      ? "bg-blue-100 text-blue-900"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                      ? "bg-gradient-to-r from-[#6366F1]/20 to-[#A855F7]/20 text-[#6366F1] border-l-2 border-[#6366F1]"
+                      : "text-[#475569] hover:bg-white/50 hover:text-[#0F172A]",
                   )}
                 >
                   <item.icon className="mr-3 h-5 w-5" />
@@ -161,14 +165,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="md:pl-64 flex flex-col flex-1">
-        <div className="sticky top-0 z-10 md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-gray-50">
+        <div className="sticky top-0 z-10 md:hidden pl-1 pt-1 sm:pl-3 sm:pt-3 bg-transparent">
           <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-6 w-6" />
           </Button>
         </div>
 
         {/* Top bar */}
-        <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-slate-200/80">
           <div className="px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center min-w-0 flex-1">

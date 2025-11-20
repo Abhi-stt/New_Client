@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Users, Activity, UserPlus, Eye, EyeOff, Edit, Trash2, Search, Filter, Calendar } from "lucide-react"
+import { Users, Activity, UserPlus, Eye, EyeOff, Edit, Trash2, Search, Filter, Calendar, Presentation } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api"
@@ -50,6 +50,24 @@ interface DashboardStats {
   weeklyActivities: number
 }
 
+interface DemoRequest {
+  _id: string
+  name: string
+  email: string
+  phone: string
+  company: string
+  status: 'pending' | 'contacted' | 'completed' | 'cancelled'
+  notes?: string
+  contactedBy?: {
+    _id: string
+    name: string
+    email: string
+  }
+  contactedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export function SuperAdminDashboard() {
   const { user } = useAuth()
   const { toast } = useToast()
@@ -62,6 +80,7 @@ export function SuperAdminDashboard() {
   })
   const [users, setUsers] = useState<User[]>([])
   const [activities, setActivities] = useState<UserActivity[]>([])
+  const [demoRequests, setDemoRequests] = useState<DemoRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null)
   const [showCreateUser, setShowCreateUser] = useState(false)
@@ -71,6 +90,8 @@ export function SuperAdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("")
   const [roleFilter, setRoleFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [demoStatusFilter, setDemoStatusFilter] = useState("all")
+  const [activeTab, setActiveTab] = useState("users")
 
   // Initialize form validation
   const {
@@ -111,6 +132,11 @@ export function SuperAdminDashboard() {
       const usersResponse = await fetch(`${api.superAdminUsers}?userId=${user?.id}`)
       const usersData = await usersResponse.json()
       setUsers(usersData)
+
+      // Fetch demo requests
+      const demoResponse = await fetch(`${api.superAdminDemoRequests}?userId=${user?.id}`)
+      const demoData = await demoResponse.json()
+      setDemoRequests(demoData.requests || [])
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
       toast({
@@ -285,6 +311,57 @@ export function SuperAdminDashboard() {
     }
   }
 
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case "pending": return "bg-yellow-100 text-yellow-800"
+      case "contacted": return "bg-blue-100 text-blue-800"
+      case "completed": return "bg-green-100 text-green-800"
+      case "cancelled": return "bg-red-100 text-red-800"
+      default: return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const handleUpdateDemoStatus = async (requestId: string, status: string) => {
+    try {
+      // Ensure we stay on demo-requests tab
+      setActiveTab("demo-requests")
+      
+      const response = await fetch(`${api.superAdminUpdateDemoRequest(requestId)}?userId=${user?.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Demo request status updated"
+        })
+        // Fetch only demo requests to avoid tab switch
+        const demoResponse = await fetch(`${api.superAdminDemoRequests}?userId=${user?.id}`)
+        const demoData = await demoResponse.json()
+        setDemoRequests(demoData.requests || [])
+      } else {
+        const error = await response.json()
+        toast({
+          title: "Error",
+          description: error.error || "Failed to update status",
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update demo request status",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const filteredDemoRequests = demoRequests.filter((request) => {
+    return demoStatusFilter === "all" || request.status === demoStatusFilter
+  })
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>
   }
@@ -294,16 +371,16 @@ export function SuperAdminDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Super Admin Dashboard</h1>
-          <p className="text-sm sm:text-base text-gray-600">Manage all users and monitor system activities</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Super Admin Dashboard</h1>
+          <p className="text-sm sm:text-base text-[#475569]">Manage all users and monitor system activities</p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-          <Button onClick={() => window.location.href = '/tasks'} className="w-full sm:w-auto">
+          <Button onClick={() => window.location.href = '/tasks'} className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
             <Calendar className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Manage Tasks</span>
             <span className="sm:hidden">Tasks</span>
           </Button>
-          <Button onClick={() => setShowCreateUser(true)} className="w-full sm:w-auto">
+          <Button onClick={() => setShowCreateUser(true)} className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
             <UserPlus className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Create User</span>
             <span className="sm:hidden">Add User</span>
@@ -313,7 +390,7 @@ export function SuperAdminDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -324,7 +401,7 @@ export function SuperAdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Users</CardTitle>
             <Users className="h-4 w-4 text-green-600" />
@@ -335,7 +412,7 @@ export function SuperAdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inactive Users</CardTitle>
             <Users className="h-4 w-4 text-red-600" />
@@ -346,7 +423,7 @@ export function SuperAdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today's Activities</CardTitle>
             <Activity className="h-4 w-4 text-blue-600" />
@@ -357,7 +434,7 @@ export function SuperAdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Weekly Activities</CardTitle>
             <Calendar className="h-4 w-4 text-purple-600" />
@@ -370,15 +447,16 @@ export function SuperAdminDashboard() {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="users" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="activities">Activity Log</TabsTrigger>
+          <TabsTrigger value="demo-requests">Request Demo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-4">
           {/* Filters */}
-          <Card>
+          <Card className="bg-white/80 backdrop-blur-sm">
             <CardHeader>
               <CardTitle>User Management</CardTitle>
               <CardDescription>Manage all system users</CardDescription>
@@ -518,7 +596,7 @@ export function SuperAdminDashboard() {
         </TabsContent>
 
         <TabsContent value="activities" className="space-y-4">
-          <Card>
+          <Card className="bg-white/80 backdrop-blur-sm">
             <CardHeader>
               <CardTitle>Recent Activities</CardTitle>
               <CardDescription>Monitor user activities across the system</CardDescription>
@@ -555,6 +633,109 @@ export function SuperAdminDashboard() {
                         </TableCell>
                       </TableRow>
                     ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="demo-requests" className="space-y-4">
+          <Card className="bg-white/80 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle>Demo Requests</CardTitle>
+              <CardDescription>View and manage all demo requests from potential clients</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
+                <div className="flex-1">
+                  <Select value={demoStatusFilter} onValueChange={setDemoStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-48">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="contacted">Contacted</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="border rounded-lg overflow-x-auto">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Company</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Requested</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredDemoRequests.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                          No demo requests found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredDemoRequests.map((request) => (
+                        <TableRow key={request._id}>
+                          <TableCell className="font-medium">{request.name}</TableCell>
+                          <TableCell>{request.email}</TableCell>
+                          <TableCell>{request.phone}</TableCell>
+                          <TableCell>{request.company}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusBadgeColor(request.status)}>
+                              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {new Date(request.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                              {request.status === 'pending' && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleUpdateDemoStatus(request._id, 'contacted')}
+                                    className="text-blue-600 hover:text-blue-700"
+                                  >
+                                    Mark Contacted
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleUpdateDemoStatus(request._id, 'completed')}
+                                    className="text-green-600 hover:text-green-700"
+                                  >
+                                    Mark Completed
+                                  </Button>
+                                </>
+                              )}
+                              {request.status === 'contacted' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUpdateDemoStatus(request._id, 'completed')}
+                                  className="text-green-600 hover:text-green-700"
+                                >
+                                  Mark Completed
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>

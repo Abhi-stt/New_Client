@@ -71,21 +71,21 @@ export function ManagerDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Manager Dashboard</h1>
-          <p className="text-sm sm:text-base text-gray-600">Manage your team and client assignments</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Manager Dashboard</h1>
+          <p className="text-sm sm:text-base text-[#475569]">Manage your team and client assignments</p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-          <Button onClick={() => router.push('/tasks')} className="w-full sm:w-auto">
+          <Button onClick={() => router.push('/tasks')} className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
             <CheckSquare className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Manage Tasks</span>
             <span className="sm:hidden">Tasks</span>
           </Button>
-          <Button variant="outline" onClick={() => router.push('/documents')} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={() => router.push('/documents')} className="w-full sm:w-auto border-slate-200 text-[#475569] hover:border-[#6366F1] hover:text-[#6366F1]">
             <FileText className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Review Documents</span>
             <span className="sm:hidden">Documents</span>
           </Button>
-          <Button variant="outline" onClick={() => router.push('/team')} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={() => router.push('/team')} className="w-full sm:w-auto border-slate-200 text-[#475569] hover:border-[#6366F1] hover:text-[#6366F1]">
             <Users className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">View Team</span>
             <span className="sm:hidden">Team</span>
@@ -95,7 +95,7 @@ export function ManagerDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Team Members</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -106,7 +106,7 @@ export function ManagerDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Assigned Clients</CardTitle>
             <Building className="h-4 w-4 text-muted-foreground" />
@@ -117,7 +117,7 @@ export function ManagerDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
             <CheckSquare className="h-4 w-4 text-muted-foreground" />
@@ -128,7 +128,7 @@ export function ManagerDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completed</CardTitle>
             <CheckSquare className="h-4 w-4 text-muted-foreground" />
@@ -142,7 +142,7 @@ export function ManagerDashboard() {
 
       {/* Team Performance */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Team Performance</CardTitle>
             <CardDescription>Overall team completion rate</CardDescription>
@@ -158,7 +158,7 @@ export function ManagerDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
             <CardDescription>Manage your team efficiently</CardDescription>

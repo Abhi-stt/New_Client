@@ -52,21 +52,21 @@ export function AdminDashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-sm sm:text-base text-gray-600">Manage your CA firm operations</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">Admin Dashboard</h1>
+          <p className="text-sm sm:text-base text-[#475569]">Manage your CA firm operations</p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-          <Button onClick={() => window.location.href = '/tasks'} className="w-full sm:w-auto">
+          <Button onClick={() => window.location.href = '/tasks'} className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
             <CheckSquare className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Manage Tasks</span>
             <span className="sm:hidden">Tasks</span>
           </Button>
-          <Button onClick={() => setShowCreateManager(true)} className="w-full sm:w-auto">
+          <Button onClick={() => setShowCreateManager(true)} className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
             <Users className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Create Manager</span>
             <span className="sm:hidden">Add Manager</span>
           </Button>
-          <Button variant="outline" onClick={() => setShowDocumentRequest(true)} className="w-full sm:w-auto">
+          <Button variant="outline" onClick={() => setShowDocumentRequest(true)} className="w-full sm:w-auto border-slate-200 text-[#475569] hover:border-[#6366F1] hover:text-[#6366F1]">
             <FileText className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Request Document</span>
             <span className="sm:hidden">Request Doc</span>
@@ -76,7 +76,7 @@ export function AdminDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
@@ -87,7 +87,7 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
             <Building className="h-4 w-4 text-muted-foreground" />
@@ -98,7 +98,7 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Documents</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
@@ -109,7 +109,7 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Tasks</CardTitle>
             <CheckSquare className="h-4 w-4 text-muted-foreground" />
@@ -123,7 +123,7 @@ export function AdminDashboard() {
 
       {/* Progress Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Task Completion Rate</CardTitle>
             <CardDescription>Overall completion rate this month</CardDescription>
@@ -139,7 +139,7 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
             <CardDescription>Common administrative tasks</CardDescription>
@@ -147,7 +147,7 @@ export function AdminDashboard() {
           <CardContent className="space-y-2">
             <Button 
               variant="outline" 
-              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              className="w-full justify-start bg-transparent hover:bg-white/50 border-slate-200 text-[#475569] hover:text-[#0F172A]"
               onClick={() => router.push('/team')}
             >
               <Users className="mr-2 h-4 w-4" />
@@ -155,7 +155,7 @@ export function AdminDashboard() {
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              className="w-full justify-start bg-transparent hover:bg-white/50 border-slate-200 text-[#475569] hover:text-[#0F172A]"
               onClick={() => router.push('/clients')}
             >
               <Building className="mr-2 h-4 w-4" />
@@ -163,7 +163,7 @@ export function AdminDashboard() {
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              className="w-full justify-start bg-transparent hover:bg-white/50 border-slate-200 text-[#475569] hover:text-[#0F172A]"
               onClick={() => router.push('/queries')}
             >
               <MessageSquare className="mr-2 h-4 w-4" />
@@ -171,7 +171,7 @@ export function AdminDashboard() {
             </Button>
             <Button 
               variant="outline" 
-              className="w-full justify-start bg-transparent hover:bg-gray-50"
+              className="w-full justify-start bg-transparent hover:bg-white/50 border-slate-200 text-[#475569] hover:text-[#0F172A]"
               onClick={() => router.push('/tasks')}
             >
               <CheckSquare className="mr-2 h-4 w-4" />
@@ -182,7 +182,7 @@ export function AdminDashboard() {
       </div>
 
       {/* Recent Activities */}
-      <Card>
+      <Card className="bg-white/80 backdrop-blur-sm">
         <CardHeader>
           <CardTitle>Recent Activities</CardTitle>
           <CardDescription>Latest system activities and updates</CardDescription>
@@ -192,7 +192,7 @@ export function AdminDashboard() {
             {recentActivities.length > 0 ? (
               recentActivities.map((activity: any, index) => (
                 <div key={index} className="flex items-center space-x-4">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  <div className="w-2 h-2 bg-gradient-to-r from-[#6366F1] to-[#A855F7] rounded-full"></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">{activity.description}</p>
                     <p className="text-xs text-muted-foreground">{activity.timestamp}</p>

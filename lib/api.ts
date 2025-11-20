@@ -72,6 +72,8 @@ export const api = {
   superAdminCreateUser: `${API_BASE_URL}/super-admin/users`,
   superAdminUpdateUser: (id: string) => `${API_BASE_URL}/super-admin/users/${id}`,
   superAdminDeleteUser: (id: string) => `${API_BASE_URL}/super-admin/users/${id}`,
+  superAdminDemoRequests: `${API_BASE_URL}/super-admin/demo-requests`,
+  superAdminUpdateDemoRequest: (id: string) => `${API_BASE_URL}/super-admin/demo-requests/${id}`,
   
   // Calendar endpoints
   calendarEvents: `${API_BASE_URL}/calendar-events`,

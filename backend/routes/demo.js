@@ -1,9 +1,6 @@
 const express = require('express');
+const DemoRequest = require('../schemas/DemoRequest');
 const router = express.Router();
-
-// In-memory storage for demo requests (you can replace this with a database schema if needed)
-// For production, consider creating a DemoRequest schema
-const demoRequests = [];
 
 // Request a demo
 router.post('/request', async (req, res) => {
@@ -21,31 +18,27 @@ router.post('/request', async (req, res) => {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    // Create demo request object
-    const demoRequest = {
-      id: Date.now().toString(),
+    // Create and save demo request to database
+    const demoRequest = new DemoRequest({
       name,
       email,
       phone,
       company,
-      createdAt: new Date().toISOString(),
       status: 'pending',
-    };
+    });
 
-    // Store the demo request (in production, save to database)
-    demoRequests.push(demoRequest);
+    await demoRequest.save();
 
     // Log the demo request
     console.log('Demo request received:', demoRequest);
 
     // In production, you might want to:
-    // 1. Save to database
-    // 2. Send notification email to admin
-    // 3. Send confirmation email to user
+    // 1. Send notification email to admin
+    // 2. Send confirmation email to user
 
     res.status(201).json({
       message: 'Demo request submitted successfully',
-      requestId: demoRequest.id,
+      requestId: demoRequest._id,
     });
   } catch (err) {
     console.error('Demo request error:', err);
@@ -56,7 +49,10 @@ router.post('/request', async (req, res) => {
 // Get all demo requests (admin only - add auth middleware in production)
 router.get('/requests', async (req, res) => {
   try {
-    res.json({ requests: demoRequests });
+    const requests = await DemoRequest.find()
+      .sort({ createdAt: -1 })
+      .populate('contactedBy', 'name email');
+    res.json({ requests });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
