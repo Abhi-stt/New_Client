@@ -5,6 +5,7 @@ const Task = require('../schemas/Task');
 const Document = require('../schemas/Document');
 const Query = require('../schemas/Query');
 const Firm = require('../schemas/Firm');
+const UserActivity = require('../schemas/UserActivity');
 const mongoose = require('mongoose');
 const { getUserAdminId, buildAccessFilter, getAdminDomainStats } = require('../utils/accessControl');
 const router = express.Router();
@@ -338,6 +339,53 @@ router.get('/team-member', async (req, res) => {
     res.json(dashboardData);
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// Get admin activities (activities from managers, team members, and clients in admin's domain)
+router.get('/admin/activities', async (req, res) => {
+  try {
+    const { userId, page = 1, limit = 50 } = req.query;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+    
+    const userAdminId = await getUserAdminId(userId);
+    
+    // Get all users in admin's domain (managers, team members, clients)
+    const domainUsers = await User.find({
+      $or: [
+        { _id: userAdminId }, // Admin themselves
+        { adminId: userAdminId } // All users in admin's domain
+      ]
+    }).select('_id');
+    
+    const userIds = domainUsers.map(u => u._id);
+    
+    // Get activities from these users
+    const activities = await UserActivity.find({
+      userId: { $in: userIds }
+    })
+      .populate('userId', 'name email role')
+      .sort({ timestamp: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .exec();
+    
+    const total = await UserActivity.countDocuments({
+      userId: { $in: userIds }
+    });
+    
+    res.json({
+      activities,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
+      total
+    });
+  } catch (error) {
+    console.error('Error fetching admin activities:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

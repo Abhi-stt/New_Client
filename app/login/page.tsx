@@ -45,7 +45,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <Shield className="mx-auto h-12 w-12 text-blue-600" />
+          <Shield className="mx-auto h-12 w-12 bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent" />
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Client Portal</h2>
           <p className="mt-2 text-sm text-gray-600">CA Management System</p>
         </div>
@@ -104,7 +104,11 @@ export default function LoginPage() {
                 </Alert>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25" 
+                disabled={loading}
+              >
                 {loading ? "Signing in..." : "Sign in"}
               </Button>
             </form>

@@ -218,7 +218,7 @@ export function TaskManagement() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800'
-      case 'in_progress': return 'bg-blue-100 text-blue-800'
+      case 'in_progress': return 'bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 text-[#6366F1]'
       case 'pending': return 'bg-yellow-100 text-yellow-800'
       case 'review': return 'bg-purple-100 text-purple-800'
       case 'approved': return 'bg-emerald-100 text-emerald-800'
@@ -294,7 +294,7 @@ export function TaskManagement() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <FileText className="h-4 w-4 text-blue-600" />
+              <FileText className="h-4 w-4 text-[#6366F1]" />
               <div>
                 <p className="text-sm font-medium">Total</p>
                 <p className="text-2xl font-bold">{taskStats.total}</p>
@@ -316,7 +316,7 @@ export function TaskManagement() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <Clock className="h-4 w-4 text-blue-600" />
+              <Clock className="h-4 w-4 text-[#6366F1]" />
               <div>
                 <p className="text-sm font-medium">In Progress</p>
                 <p className="text-2xl font-bold">{taskStats.inProgress}</p>
@@ -425,7 +425,7 @@ export function TaskManagement() {
                       </Badge>
                     )}
                     {task.reassignedAt && (
-                      <Badge variant="outline" className="text-blue-600">
+                      <Badge variant="outline" className="text-[#6366F1]">
                         Reassigned
                       </Badge>
                     )}
@@ -495,9 +495,9 @@ export function TaskManagement() {
                         size="sm"
                         variant="outline"
                         onClick={() => openReassignDialog(task)}
-                        className="bg-blue-50 border-blue-200 hover:bg-blue-100"
+                        className="bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 border-[#6366F1]/20 hover:bg-gradient-to-br hover:from-[#6366F1]/20 hover:to-[#A855F7]/20"
                       >
-                        <User className="h-4 w-4 text-blue-600" />
+                        <User className="h-4 w-4 text-[#6366F1]" />
                         Assign to Team
                       </Button>
                       

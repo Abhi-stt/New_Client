@@ -186,7 +186,7 @@ export function CreateTeamMemberDialog({ open, onOpenChange, onSuccess }: Create
             <div className="space-y-6 max-w-none">
               {/* Personal Information Section */}
               <div className="space-y-4">
-                <div className="border-l-4 border-blue-500 pl-4">
+                <div className="border-l-4 border-[#6366F1] pl-4">
                   <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
                   <p className="text-sm text-gray-600">Basic details about the team member</p>
                 </div>
@@ -288,16 +288,16 @@ export function CreateTeamMemberDialog({ open, onOpenChange, onSuccess }: Create
                 {/* Show info when no managers available */}
                 {user?.role === "admin" && formState.role.value === "team_member" && 
                  Array.isArray(managers) && managers.length === 0 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 border border-[#6366F1]/20 rounded-lg p-4">
                     <div className="flex items-start">
                       <div className="flex-shrink-0">
-                        <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                        <svg className="h-5 w-5 text-[#6366F1]" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                         </svg>
                       </div>
                       <div className="ml-3 flex-1">
-                        <h4 className="text-sm font-medium text-blue-800">No Managers Available</h4>
-                        <p className="mt-1 text-sm text-blue-700">
+                        <h4 className="text-sm font-medium bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent">No Managers Available</h4>
+                        <p className="mt-1 text-sm text-gray-700">
                           You can create this team member without a manager assignment, or create managers first using the "Manager" role option above.
                         </p>
                       </div>
@@ -341,7 +341,6 @@ export function CreateTeamMemberDialog({ open, onOpenChange, onSuccess }: Create
                       <SelectContent>
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="inactive">Inactive</SelectItem>
-                        <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="suspended">Suspended</SelectItem>
                       </SelectContent>
                     </Select>
@@ -406,7 +405,7 @@ export function CreateTeamMemberDialog({ open, onOpenChange, onSuccess }: Create
               <Button 
                 type="submit" 
                 disabled={loading || !isValid}
-                className="flex-1 sm:flex-none sm:w-auto order-1 sm:order-2 min-w-[200px]"
+                className="flex-1 sm:flex-none sm:w-auto order-1 sm:order-2 min-w-[200px] bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25"
               >
                 {loading ? (
                   <>

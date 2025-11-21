@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
 import { HOST_URL } from "@/lib/api"
+import { CreateManagerDialog } from "@/components/dialogs/create-manager-dialog"
 
 interface CreateClientDialogProps {
   open: boolean
@@ -42,6 +43,7 @@ export function CreateClientDialog({ open, onOpenChange, onSuccess }: CreateClie
   })
   const [loading, setLoading] = useState(false)
   const [managers, setManagers] = useState([])
+  const [showCreateManager, setShowCreateManager] = useState(false)
   const { toast } = useToast()
 
   // Fetch managers for assignment (only for admin)
@@ -188,7 +190,6 @@ export function CreateClientDialog({ open, onOpenChange, onSuccess }: CreateClie
                 <SelectContent>
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="suspended">Suspended</SelectItem>
                 </SelectContent>
               </Select>
@@ -198,19 +199,30 @@ export function CreateClientDialog({ open, onOpenChange, onSuccess }: CreateClie
                 <Label htmlFor="managerId" className="text-right">
                   Assign Manager
                 </Label>
-                <Select value={formData.managerId} onValueChange={(value) => setFormData({ ...formData, managerId: value })}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select manager (optional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Manager</SelectItem>
-                    {managers.map((manager: any) => (
-                      <SelectItem key={manager._id} value={manager._id}>
-                        {manager.name} ({manager.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="col-span-3 space-y-2">
+                  <Select value={formData.managerId} onValueChange={(value) => setFormData({ ...formData, managerId: value })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select manager (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Manager</SelectItem>
+                      {managers.map((manager: any) => (
+                        <SelectItem key={manager._id} value={manager._id}>
+                          {manager.name} ({manager.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {managers.length === 0 && (
+                    <Button
+                      type="button"
+                      onClick={() => setShowCreateManager(true)}
+                      className="w-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25"
+                    >
+                      Create Manager
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
             <div className="grid grid-cols-4 items-center gap-4">
@@ -262,12 +274,26 @@ export function CreateClientDialog({ open, onOpenChange, onSuccess }: CreateClie
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading}
+              className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25"
+            >
               {loading ? "Creating..." : "Create Client"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
+      
+      {/* Create Manager Dialog */}
+      <CreateManagerDialog
+        open={showCreateManager}
+        onOpenChange={setShowCreateManager}
+        onSuccess={() => {
+          fetchManagers()
+          setShowCreateManager(false)
+        }}
+      />
     </Dialog>
   )
 }

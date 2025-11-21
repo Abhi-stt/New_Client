@@ -70,7 +70,7 @@ export default function FirmsPage() {
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366F1] mx-auto"></div>
             <p className="mt-2 text-gray-600">Loading firms...</p>
           </div>
         </div>
@@ -160,8 +160,8 @@ export default function FirmsPage() {
               <Card key={firm.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4 mb-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Building className="h-6 w-6 text-blue-600" />
+                    <div className="w-12 h-12 bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 rounded-lg flex items-center justify-center">
+                      <Building className="h-6 w-6 bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent" />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold">{firm.name}</h3>
@@ -219,7 +219,10 @@ export default function FirmsPage() {
                       ? "No firms match your current filters."
                       : "No firms have been added yet."}
                   </p>
-                  <Button onClick={() => setShowCreateDialog(true)}>
+                  <Button 
+                    onClick={() => setShowCreateDialog(true)}
+                    className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25"
+                  >
                     <Plus className="mr-2 h-4 w-4" />
                     Add First Firm
                   </Button>

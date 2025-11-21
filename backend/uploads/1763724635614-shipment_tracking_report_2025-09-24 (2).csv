@@ -1,0 +1,17 @@
+SHIPMENT TRACKING REPORT SUMMARY
+Generated: 9/24/2025, 12:35:04 PM
+Total Shipments: 2
+In Transit: 0
+In Customs: 0
+Delivered: 1
+Delayed: 0
+Pending: 1
+Total Value: $835,000
+Total Weight: 5,350 kg
+Average Progress: 83%
+
+DETAILED SHIPMENT DATA
+
+Tracking Number,Exporter,Consignee,Origin,Destination,Mode,Status,Progress,Estimated Delivery,Actual Delivery,Documents Status,Value,Weight,Containers
+"MH12345","Sattva Tech","ISTOER","Gujarat","Dubai","SEA","PENDING","66%","2025-09-24T00:00:00.000Z","N/A","ISSUES","$800,000","5,000 kg","SH0012345"
+"SHIP17545652569633","Exporter Company 3","Consignee Company 3","Mumbai, India - Port INMUN","New York, USA - Port USNYC","SEA","DELIVERED","100%","2025-08-28T11:14:16.963Z","N/A","PENDING","$35,000","350 kg","N/A"

@@ -80,19 +80,19 @@ export default function DocumentUploadPage({ params }: { params: { token: string
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             style={{
-              border: dragActive ? "2px solid #3b82f6" : "2px dashed #cbd5e1",
+              border: dragActive ? "2px solid #6366F1" : "2px dashed #cbd5e1",
               borderRadius: 12,
               padding: 32,
               textAlign: "center",
-              background: dragActive ? "#f0f9ff" : "#f9fafb",
+              background: dragActive ? "linear-gradient(to bottom right, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))" : "#f9fafb",
               marginBottom: 24,
               cursor: "pointer",
               transition: "border 0.2s, background 0.2s"
             }}
             onClick={() => fileInputRef.current?.click()}
           >
-            <div style={{ fontSize: 48, color: "#3b82f6", marginBottom: 8 }}>📄</div>
-            <div style={{ fontSize: 16, color: "#64748b", marginBottom: 8 }}>Drag & drop files here or <span style={{ color: "#3b82f6", textDecoration: "underline" }}>browse</span></div>
+            <div style={{ fontSize: 48, background: "linear-gradient(to right, #6366F1, #A855F7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: 8 }}>📄</div>
+            <div style={{ fontSize: 16, color: "#64748b", marginBottom: 8 }}>Drag & drop files here or <span style={{ background: "linear-gradient(to right, #6366F1, #A855F7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", textDecoration: "underline" }}>browse</span></div>
             <input
               ref={fileInputRef}
               type="file"
@@ -106,9 +106,9 @@ export default function DocumentUploadPage({ params }: { params: { token: string
           {status === "uploading" && (
             <div style={{ marginBottom: 16 }}>
               <div style={{ height: 8, background: "#e5e7eb", borderRadius: 4, overflow: "hidden" }}>
-                <div style={{ width: `${progress}%`, height: 8, background: "#3b82f6", transition: "width 0.2s" }} />
+                <div style={{ width: `${progress}%`, height: 8, background: "linear-gradient(to right, #6366F1, #A855F7)", transition: "width 0.2s" }} />
               </div>
-              <div style={{ textAlign: "center", marginTop: 8, color: "#3b82f6" }}>{progress}%</div>
+              <div style={{ textAlign: "center", marginTop: 8, background: "linear-gradient(to right, #6366F1, #A855F7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{progress}%</div>
             </div>
           )}
           <button
@@ -117,14 +117,15 @@ export default function DocumentUploadPage({ params }: { params: { token: string
             style={{
               width: "100%",
               padding: "12px 0",
-              background: "#3b82f6",
+              background: "linear-gradient(to right, #6366F1, #A855F7)",
               color: "#fff",
               border: "none",
               borderRadius: 8,
               fontWeight: 600,
               fontSize: 16,
               cursor: status === "uploading" ? "not-allowed" : "pointer",
-              marginTop: 8
+              marginTop: 8,
+              boxShadow: "0 4px 6px -1px rgba(99, 102, 241, 0.25)"
             }}
           >
             {status === "uploading" ? "Uploading..." : "Select Files"}

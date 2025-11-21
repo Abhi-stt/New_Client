@@ -176,7 +176,7 @@ export default function CalendarPage() {
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366F1] mx-auto"></div>
             <p className="mt-2 text-gray-600">Loading calendar...</p>
           </div>
         </div>
@@ -306,7 +306,7 @@ export default function CalendarPage() {
                 <span className="text-sm">Low Priority</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                <div className="w-4 h-4 bg-gradient-to-r from-[#6366F1] to-[#A855F7] rounded"></div>
                 <span className="text-sm">Compliance Deadline</span>
               </div>
             </div>

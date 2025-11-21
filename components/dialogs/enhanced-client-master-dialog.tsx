@@ -251,7 +251,7 @@ export function EnhancedClientMasterDialog({ client, open, onOpenChange, onSucce
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-800'
-      case 'in_progress': return 'bg-blue-100 text-blue-800'
+      case 'in_progress': return 'bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 text-[#6366F1]'
       case 'pending': return 'bg-yellow-100 text-yellow-800'
       case 'cancelled': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
@@ -367,7 +367,7 @@ export function EnhancedClientMasterDialog({ client, open, onOpenChange, onSucce
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <Target className="h-4 w-4 text-blue-600" />
+                    <Target className="h-4 w-4 text-[#6366F1]" />
                     <div>
                       <p className="text-sm font-medium">Active Services</p>
                       <p className="text-2xl font-bold">{services.filter(s => s.status === 'in_progress').length}</p>

@@ -13,12 +13,18 @@
 }
 
 .email-content a {
-  color: #2563eb;
+  background: linear-gradient(to right, #6366F1, #A855F7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   text-decoration: underline;
 }
 
 .email-content a:hover {
-  color: #1d4ed8;
+  background: linear-gradient(to right, #4F46E5, #9333EA);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .email-content blockquote {

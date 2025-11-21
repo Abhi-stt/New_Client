@@ -448,7 +448,7 @@ export default function DocumentsPage() {
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366F1] mx-auto"></div>
             <p className="mt-2 text-gray-600">Loading documents...</p>
           </div>
         </div>
@@ -586,7 +586,7 @@ export default function DocumentsPage() {
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                     <div className="flex items-start space-x-4">
-                      <FileText className="h-8 w-8 text-blue-600 flex-shrink-0" />
+                      <FileText className="h-8 w-8 bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <h3 className="font-semibold text-sm sm:text-base">{document.name}</h3>
                         <p className="text-xs sm:text-sm text-gray-600 mt-1">{document.description}</p>
@@ -626,7 +626,7 @@ export default function DocumentsPage() {
                                     setShowSheetViewer(true)
                                   }
                                 }}
-                                className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                                className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent hover:from-[#4F46E5] hover:to-[#9333EA] hover:underline flex items-center gap-1 font-medium cursor-pointer"
                               >
                                 <ExternalLink className="h-3 w-3" />
                                 View Google Sheet
@@ -650,7 +650,7 @@ export default function DocumentsPage() {
                                   setIframeLoading(true)
                                   setShowSheetViewer(true)
                                 }}
-                                className="text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 font-medium cursor-pointer"
+                                className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent hover:from-[#4F46E5] hover:to-[#9333EA] hover:underline flex items-center gap-1 font-medium cursor-pointer"
                               >
                                 <ExternalLink className="h-3 w-3" />
                                 View SharePoint
@@ -733,7 +733,10 @@ export default function DocumentsPage() {
                     : "No documents have been uploaded yet."}
                 </p>
                 {canUploadDocuments && (
-                  <Button onClick={() => setShowUploadDialog(true)}>
+                  <Button 
+                    onClick={() => setShowUploadDialog(true)}
+                    className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25"
+                  >
                     <Upload className="mr-2 h-4 w-4" />
                     Upload First Document
                   </Button>
@@ -815,10 +818,10 @@ export default function DocumentsPage() {
               <div className="space-y-6">
                 {/* Show current sync status if document is already synced */}
                 {(syncDoc.syncWithGoogleSheets || syncDoc.syncWithSharePoint) && (
-                  <div className="bg-blue-50 p-3 rounded-md space-y-2">
-                    <p className="text-sm font-medium text-blue-900">Current Sync Configuration:</p>
+                  <div className="bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 p-3 rounded-md space-y-2">
+                    <p className="text-sm font-medium bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent">Current Sync Configuration:</p>
                     {syncDoc.syncWithGoogleSheets && syncDoc.googleSheetsUrl && (
-                      <div className="text-xs text-blue-800">
+                      <div className="text-xs text-gray-700">
                         <span className="font-medium">Google Sheets:</span>{' '}
                         <button
                           onClick={() => {
@@ -837,14 +840,14 @@ export default function DocumentsPage() {
                               setShowSheetViewer(true)
                             }
                           }}
-                          className="underline hover:text-blue-900 cursor-pointer"
+                          className="underline hover:bg-gradient-to-r hover:from-[#6366F1] hover:to-[#A855F7] hover:bg-clip-text hover:text-transparent cursor-pointer"
                         >
                           {syncDoc.googleSheetsUrl.length > 50 ? syncDoc.googleSheetsUrl.substring(0, 50) + '...' : syncDoc.googleSheetsUrl}
                         </button>
                       </div>
                     )}
                     {syncDoc.syncWithSharePoint && syncDoc.sharePointUrl && (
-                      <div className="text-xs text-blue-800">
+                      <div className="text-xs text-gray-700">
                         <span className="font-medium">SharePoint:</span>{' '}
                         <button
                           onClick={() => {
@@ -854,7 +857,7 @@ export default function DocumentsPage() {
                             setIframeLoading(true)
                             setShowSheetViewer(true)
                           }}
-                          className="underline hover:text-blue-900 cursor-pointer"
+                          className="underline hover:bg-gradient-to-r hover:from-[#6366F1] hover:to-[#A855F7] hover:bg-clip-text hover:text-transparent cursor-pointer"
                         >
                           {syncDoc.sharePointUrl.length > 50 ? syncDoc.sharePointUrl.substring(0, 50) + '...' : syncDoc.sharePointUrl}
                         </button>
@@ -1012,7 +1015,7 @@ export default function DocumentsPage() {
               }}
             >
               {/* Header with gradient background */}
-              <DialogHeader className="px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white border-b border-blue-800">
+              <DialogHeader className="px-6 py-4 bg-gradient-to-r from-[#6366F1] to-[#A855F7] text-white border-b border-[#4F46E5]">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="bg-white/20 rounded-lg p-2">
@@ -1048,7 +1051,7 @@ export default function DocumentsPage() {
                 {iframeLoading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#6366F1]"></div>
                       <p className="text-sm text-gray-600 font-medium">Loading {sheetViewerType === 'google' ? 'Google Sheet' : 'SharePoint'}...</p>
                     </div>
                   </div>

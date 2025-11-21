@@ -151,6 +151,36 @@ export default function EmailPage() {
     }
   }, [user]);
 
+  // Handle OAuth callback - check for connected query parameter
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const connected = params.get('connected');
+      const error = params.get('error');
+      
+      if (connected === 'true') {
+        toast({
+          title: "Gmail Connected",
+          description: "Your Gmail account has been connected successfully!",
+        });
+        // Reload email account to show connected status
+        if (user) {
+          loadEmailAccount();
+        }
+        // Clean up URL
+        window.history.replaceState({}, '', '/email');
+      } else if (error) {
+        toast({
+          title: "Connection Failed",
+          description: decodeURIComponent(error),
+          variant: "destructive",
+        });
+        // Clean up URL
+        window.history.replaceState({}, '', '/email');
+      }
+    }
+  }, [user, toast]);
+
   if (authLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -576,7 +606,7 @@ export default function EmailPage() {
                   ) : emails.length === 0 ? (
                     <div className="text-center py-12 px-6">
                       <div className="max-w-md mx-auto">
-                        <Mail className="w-16 h-16 mx-auto mb-4 text-blue-500 opacity-70" />
+                        <Mail className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent opacity-70" />
                         <h3 className="text-xl font-semibold text-gray-900 mb-2">
                           Your Inbox is Empty
                         </h3>
@@ -584,14 +614,14 @@ export default function EmailPage() {
                           Click the <strong>"Sync Emails"</strong> button above to fetch your latest emails from Gmail and see them here in your inbox.
                         </p>
                         
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                        <div className="bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 border border-[#6366F1]/20 rounded-lg p-4 mb-6">
                           <div className="flex items-start gap-3">
-                            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <AlertCircle className="w-5 h-5 text-[#6366F1] flex-shrink-0 mt-0.5" />
                             <div className="text-left">
-                              <p className="text-sm font-medium text-blue-900 mb-1">
+                              <p className="text-sm font-medium bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent mb-1">
                                 First time here?
                               </p>
-                              <p className="text-xs text-blue-800">
+                              <p className="text-xs text-gray-700">
                                 You need to manually sync your emails to view them in the portal. Click the sync button at the top of this page to get started.
                               </p>
                             </div>
@@ -620,9 +650,9 @@ export default function EmailPage() {
                       {emails.map((email) => (
                         <div
                           key={email._id}
-                          className={`group p-3 sm:p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md hover:border-blue-300 ${
+                          className={`group p-3 sm:p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md hover:border-[#6366F1]/30 ${
                             !email.isRead 
-                              ? 'bg-blue-50 border-blue-200 shadow-sm' 
+                              ? 'bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 border-[#6366F1]/20 shadow-sm' 
                               : 'bg-white border-gray-200 hover:bg-gray-50'
                           }`}
                           onClick={() => handleEmailClick(email)}
@@ -631,7 +661,7 @@ export default function EmailPage() {
                             {/* Email Status Indicator */}
                             <div className="flex-shrink-0 mt-1">
                               {!email.isRead ? (
-                                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-blue-500 rounded-full" />
+                                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gradient-to-r from-[#6366F1] to-[#A855F7] rounded-full" />
                               ) : (
                                 <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gray-300 rounded-full" />
                               )}
@@ -686,7 +716,7 @@ export default function EmailPage() {
                                 }}
                                 className="h-6 w-6 sm:h-8 sm:w-8 p-0"
                               >
-                                <Forward className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 hover:text-blue-500" />
+                                <Forward className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 hover:text-[#6366F1]" />
                               </Button>
                               <MailOpen className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                             </div>

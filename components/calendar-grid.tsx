@@ -112,7 +112,7 @@ export function CalendarGrid({ events, view = 'month', onEventClick, onDateClick
       <div className={`relative group h-full w-full bg-white ${isToday ? 'ring-2 ring-blue-400' : ''} transition-all`}
         style={{ minHeight: 80 }}>
         <button
-          className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-500 text-white rounded-full p-1 shadow hover:bg-blue-600"
+          className="absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-[#6366F1] to-[#A855F7] text-white rounded-full p-1 shadow hover:from-[#4F46E5] hover:to-[#9333EA]"
           title="Quick add event"
           style={{ fontSize: 12 }}
           tabIndex={-1}
@@ -170,14 +170,14 @@ export function CalendarGrid({ events, view = 'month', onEventClick, onDateClick
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-              <CalendarIcon className="w-5 h-5 text-blue-600" />
+              <CalendarIcon className="w-5 h-5 text-[#6366F1]" />
               Events on {selectedDate?.toLocaleDateString()}
             </DialogTitle>
           </DialogHeader>
           {eventsForSelectedDate.length > 0 ? (
             <ul className="space-y-4">
               {eventsForSelectedDate.map(ev => (
-                <li key={ev.id} className="p-3 border rounded-lg shadow-sm bg-white hover:bg-blue-50 cursor-pointer" onClick={() => onEventClick?.(ev.resource)}>
+                <li key={ev.id} className="p-3 border rounded-lg shadow-sm bg-white hover:bg-gradient-to-br hover:from-[#6366F1]/10 hover:to-[#A855F7]/10 cursor-pointer" onClick={() => onEventClick?.(ev.resource)}>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-base text-gray-900">{ev.title}</span>
                     {getPriorityBadge(ev.resource.priority)}

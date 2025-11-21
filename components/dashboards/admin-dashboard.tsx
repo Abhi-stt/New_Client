@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Users, FileText, CheckSquare, Calendar, Building, MessageSquare } from "lucide-react"
+import { Users, FileText, CheckSquare, Calendar, Building, MessageSquare, Activity } from "lucide-react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { CreateManagerDialog } from "@/components/dialogs/create-manager-dialog"
 import { DocumentRequestDialog } from "@/components/dialogs/document-request-dialog"
 import { HOST_URL } from "@/lib/api"
@@ -25,6 +26,8 @@ export function AdminDashboard() {
   })
 
   const [recentActivities, setRecentActivities] = useState([])
+  const [activityLogs, setActivityLogs] = useState([])
+  const [loadingActivities, setLoadingActivities] = useState(false)
   const [showCreateManager, setShowCreateManager] = useState(false)
   const [showDocumentRequest, setShowDocumentRequest] = useState(false)
 
@@ -42,8 +45,24 @@ export function AdminDashboard() {
       const data = await response.json()
       setStats(data.stats)
       setRecentActivities(data.recentActivity)
+      fetchActivityLogs()
     } catch (error) {
       console.error("Error fetching dashboard data:", error)
+    }
+  }
+
+  const fetchActivityLogs = async () => {
+    if (!user?.id) return
+    
+    setLoadingActivities(true)
+    try {
+      const response = await fetch(`${HOST_URL}/api/dashboard/admin/activities?userId=${user.id}&limit=100`)
+      const data = await response.json()
+      setActivityLogs(data.activities || [])
+    } catch (error) {
+      console.error("Error fetching activity logs:", error)
+    } finally {
+      setLoadingActivities(false)
     }
   }
 
@@ -194,8 +213,8 @@ export function AdminDashboard() {
                 <div key={index} className="flex items-center space-x-4">
                   <div className="w-2 h-2 bg-gradient-to-r from-[#6366F1] to-[#A855F7] rounded-full"></div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
+                    <p className="text-sm font-medium">{activity.description || activity.message}</p>
+                    <p className="text-xs text-muted-foreground">{activity.timestamp || activity.time}</p>
                   </div>
                   <Badge variant="secondary">{activity.type}</Badge>
                 </div>
@@ -206,6 +225,79 @@ export function AdminDashboard() {
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Activity Logs Section */}
+      <Card className="bg-white/80 backdrop-blur-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5 text-[#6366F1]" />
+                Activity Logs
+              </CardTitle>
+              <CardDescription>All activities performed by managers, team members, and clients in your portal</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingActivities ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366F1] mx-auto"></div>
+              <p className="mt-2 text-sm text-muted-foreground">Loading activities...</p>
+            </div>
+          ) : activityLogs.length > 0 ? (
+            <div className="border rounded-lg overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Timestamp</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activityLogs.map((activity: any) => (
+                    <TableRow key={activity._id || activity.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{activity.userId?.name || 'Unknown'}</div>
+                          <div className="text-sm text-gray-500">{activity.userId?.email || ''}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {activity.userId?.role === 'manager' ? 'Manager' :
+                           activity.userId?.role === 'team_member' ? 'Team Member' :
+                           activity.userId?.role === 'client' ? 'Client' :
+                           activity.userId?.role || 'Unknown'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{activity.action || 'N/A'}</Badge>
+                      </TableCell>
+                      <TableCell className="max-w-md">
+                        <p className="text-sm truncate">{activity.description || 'No description'}</p>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-sm text-gray-600">
+                          {activity.timestamp ? new Date(activity.timestamp).toLocaleString() : 'N/A'}
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-sm text-muted-foreground">No activity logs found</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

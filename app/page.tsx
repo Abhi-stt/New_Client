@@ -71,7 +71,7 @@ export default function HomePage() {
     company: "",
     password: "",
     confirmPassword: "",
-    role: "admin" as "admin" | "manager" | "team_member",
+    role: "manager" as "manager" | "team_member",
   })
   const [showSignupPassword, setShowSignupPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -203,7 +203,7 @@ export default function HomePage() {
             company: "",
             password: "",
             confirmPassword: "",
-            role: "admin",
+            role: "manager",
           })
           router.push("/dashboard")
         } else {
@@ -1084,13 +1084,12 @@ export default function HomePage() {
                 <Label htmlFor="signup-role" className="text-[#0F172A] font-medium">Role *</Label>
                 <Select
                   value={signupForm.role}
-                  onValueChange={(value) => setSignupForm({ ...signupForm, role: value as "admin" | "manager" | "team_member" })}
+                  onValueChange={(value) => setSignupForm({ ...signupForm, role: value as "manager" | "team_member" })}
                 >
                   <SelectTrigger className="border-slate-200 rounded-xl focus:border-[#6366F1] focus:ring-[#6366F1]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
                     <SelectItem value="team_member">Team Member</SelectItem>
                   </SelectContent>
@@ -1203,7 +1202,7 @@ export default function HomePage() {
                     company: "",
                     password: "",
                     confirmPassword: "",
-                    role: "admin",
+                    role: "manager",
                   })
                 }}
                 className="border-slate-200 text-[#475569] hover:bg-slate-50 rounded-xl w-full sm:w-auto"

@@ -110,7 +110,7 @@ export default function QueriesPage() {
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366F1] mx-auto"></div>
             <p className="mt-2 text-gray-600">Loading queries...</p>
           </div>
         </div>
@@ -216,7 +216,7 @@ export default function QueriesPage() {
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-4 sm:space-y-0">
                     <div className="flex items-start space-x-4 flex-1">
-                      <MessageSquare className="h-8 w-8 text-blue-600 mt-1 flex-shrink-0" />
+                      <MessageSquare className="h-8 w-8 bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent mt-1 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2 mb-2">
                           <h3 className="font-semibold text-sm sm:text-base">{query.title}</h3>

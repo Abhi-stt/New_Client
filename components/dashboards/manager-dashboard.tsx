@@ -166,10 +166,10 @@ export function ManagerDashboard() {
           <CardContent className="space-y-2">
             <Button 
               variant="outline" 
-              className="w-full justify-start bg-transparent hover:bg-blue-50 border-blue-200 hover:border-blue-300 transition-colors"
+              className="w-full justify-start bg-transparent hover:bg-gradient-to-br hover:from-[#6366F1]/10 hover:to-[#A855F7]/10 border-[#6366F1]/20 hover:border-[#6366F1]/30 transition-colors"
               onClick={() => router.push('/team')}
             >
-              <Users className="mr-2 h-4 w-4 text-blue-600" />
+              <Users className="mr-2 h-4 w-4 text-[#6366F1]" />
               <span className="text-left">
                 <div className="font-medium">View Team Members</div>
                 <div className="text-xs text-gray-500">Manage {stats.teamMembers} team members</div>
@@ -226,7 +226,7 @@ export function ManagerDashboard() {
                   <div className={`w-3 h-3 rounded-full ${
                     activity.description.includes('completed') ? 'bg-green-500' : 
                     activity.description.includes('pending') ? 'bg-yellow-500' : 
-                    activity.description.includes('progress') ? 'bg-blue-500' : 'bg-gray-500'
+                    activity.description.includes('progress') ? 'bg-gradient-to-r from-[#6366F1] to-[#A855F7]' : 'bg-gray-500'
                   }`}></div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">{activity.description}</p>

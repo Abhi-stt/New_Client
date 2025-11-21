@@ -27,7 +27,7 @@ export default function SignupPage() {
     company: "",
     password: "",
     confirmPassword: "",
-    role: "admin" as "admin" | "manager" | "team_member",
+    role: "manager" as "manager" | "team_member",
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,13 +87,13 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <Link href="/" className="inline-flex items-center space-x-2 text-blue-600 hover:text-blue-700 mb-4">
+          <Link href="/" className="inline-flex items-center space-x-2 bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent hover:from-[#4F46E5] hover:to-[#9333EA] mb-4">
             <ArrowLeft className="h-4 w-4" />
             <span>Back to Home</span>
           </Link>
           <div className="flex justify-center mb-4">
-            <div className="bg-blue-100 p-3 rounded-full">
-              <Shield className="h-12 w-12 text-blue-600" />
+            <div className="bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 p-3 rounded-full">
+              <Shield className="h-12 w-12 bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent" />
             </div>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Create Your Account</h2>
@@ -171,7 +171,6 @@ export default function SignupPage() {
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   required
                 >
-                  <option value="admin">Admin</option>
                   <option value="manager">Manager</option>
                   <option value="team_member">Team Member</option>
                 </select>
@@ -232,9 +231,9 @@ export default function SignupPage() {
                 </Alert>
               )}
 
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3 space-y-2">
-                <p className="text-sm font-medium text-blue-900">By signing up, you agree to:</p>
-                <ul className="text-xs text-blue-800 space-y-1">
+              <div className="bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 border border-[#6366F1]/20 rounded-md p-3 space-y-2">
+                <p className="text-sm font-medium bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent">By signing up, you agree to:</p>
+                <ul className="text-xs text-gray-700 space-y-1">
                   <li className="flex items-start space-x-2">
                     <Check className="h-4 w-4 mt-0.5 flex-shrink-0" />
                     <span>Our Terms of Service</span>
@@ -246,13 +245,17 @@ export default function SignupPage() {
                 </ul>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25" 
+                disabled={loading}
+              >
                 {loading ? "Creating Account..." : "Create Account"}
               </Button>
 
               <div className="text-center text-sm text-gray-600">
                 Already have an account?{" "}
-                <Link href="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                <Link href="/login" className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent hover:from-[#4F46E5] hover:to-[#9333EA] font-medium">
                   Sign in
                 </Link>
               </div>

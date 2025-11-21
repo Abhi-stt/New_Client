@@ -21,19 +21,38 @@ router.get('/gmail/auth/:userId', async (req, res) => {
 // Handle Gmail OAuth callback
 router.get('/gmail/callback', async (req, res) => {
   try {
+    console.log('Gmail OAuth callback received');
+    console.log('Query params:', req.query);
+    
     const { code, state: userId } = req.query;
     
     if (!code || !userId) {
-      return res.status(400).json({ error: 'Missing code or state parameter' });
+      console.error('Missing code or userId in callback');
+      return res.status(400).send(`
+        <html>
+          <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+            <h2 style="color: red;">Authorization Failed</h2>
+            <p>Missing authorization code or user ID.</p>
+            <p>You can close this window.</p>
+            <script>setTimeout(() => window.close(), 3000);</script>
+          </body>
+        </html>
+      `);
     }
 
+    console.log('Exchanging code for tokens for user:', userId);
     const emailAccount = await gmailService.exchangeCodeForTokens(code, userId);
+    console.log('Gmail account connected successfully:', emailAccount.email);
     
     // Redirect to frontend with success message
-    res.redirect(`${process.env.FRONTEND_URL}/email?connected=true`);
+    const frontendUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_HOST_URL || 'http://localhost:3000';
+    
+    // Immediately redirect to frontend
+    res.redirect(`${frontendUrl}/email?connected=true`);
   } catch (error) {
     console.error('Gmail OAuth callback error:', error);
-    res.redirect(`${process.env.FRONTEND_URL}/email?error=${encodeURIComponent(error.message)}`);
+    const frontendUrl = process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_HOST_URL || 'http://localhost:3000';
+    res.redirect(`${frontendUrl}/email?error=${encodeURIComponent(error.message)}`);
   }
 });
 

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Dialog,
   DialogContent,
@@ -19,14 +19,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/components/auth-provider"
-import { File, X } from "lucide-react"
+import { File, X, Upload, Plus } from "lucide-react"
 import { HOST_URL } from "@/lib/api"
+import { CreateTeamMemberDialog } from "@/components/dialogs/create-team-member-dialog"
+import { CreateClientDialog } from "@/components/dialogs/create-client-dialog"
 
 interface Client {
   id: string;
   name: string;
   email: string;
   // Add other fields as needed
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role?: string;
 }
 
 interface FileUploadDialogProps {
@@ -42,6 +51,7 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
     description: "",
     type: "",
     clientId: "",
+    teamMemberId: "",
     firmId: "",
     syncWithGoogleSheets: false,
     syncWithSharePoint: false,
@@ -50,8 +60,12 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
   })
   const [files, setFiles] = useState<File[]>([])
   const [clients, setClients] = useState<Client[]>([])
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [firms, setFirms] = useState([])
   const [loading, setLoading] = useState(false)
+  const [showCreateTeamMember, setShowCreateTeamMember] = useState(false)
+  const [showCreateClient, setShowCreateClient] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -61,6 +75,7 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
         fetchClientForUser()
       } else {
         fetchClients()
+        fetchTeamMembers()
       }
       // Don't fetch firms initially - only when a client is selected
     }
@@ -138,6 +153,33 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
     }
   }
 
+  const fetchTeamMembers = async () => {
+    try {
+      let url = `${HOST_URL}/api/users/team-members?role=${user?.role}&userId=${user?.id}`
+      if (user?.role === "admin") {
+        url = `${HOST_URL}/api/users/all-team-members?role=${user?.role}&userId=${user?.id}`
+      }
+      
+      const response = await fetch(url)
+      const data = await response.json()
+      
+      if (Array.isArray(data)) {
+        setTeamMembers(data.map((member: any) => ({
+          id: member.id || member._id,
+          name: member.name,
+          email: member.email,
+          role: member.role
+        })))
+      } else {
+        console.error('Expected array but got:', data)
+        setTeamMembers([])
+      }
+    } catch (error) {
+      console.error("Error fetching team members:", error)
+      setTeamMembers([])
+    }
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       setFiles(Array.from(e.target.files))
@@ -186,6 +228,7 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
           description: "",
           type: "",
           clientId: "",
+          teamMemberId: "",
           firmId: "",
           syncWithGoogleSheets: false,
           syncWithSharePoint: false,
@@ -226,8 +269,23 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
               <Label htmlFor="files" className="text-right">
                 Files
               </Label>
-              <div className="col-span-3">
-                <Input id="files" type="file" multiple onChange={handleFileChange} className="mb-2" />
+              <div className="col-span-3 space-y-2">
+                <Input 
+                  id="files" 
+                  type="file" 
+                  multiple 
+                  onChange={handleFileChange} 
+                  className="hidden" 
+                  ref={fileInputRef}
+                />
+                <Button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Choose Files
+                </Button>
                 {files.length > 0 && (
                   <div className="space-y-2">
                     {files.map((file, index) => (
@@ -299,29 +357,82 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
                 <Label htmlFor="client" className="text-right">
                   Client
                 </Label>
-                <Select
-                  value={formData.clientId}
-                  onValueChange={(value) => setFormData({ ...formData, clientId: value })}
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.isArray(clients) ? clients.map((client: Client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    )) : []}
-                  </SelectContent>
-                </Select>
+                <div className="col-span-3 space-y-2">
+                  <Select
+                    value={formData.clientId || "none"}
+                    onValueChange={(value) => setFormData({ ...formData, clientId: value === "none" ? "" : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select client (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Client</SelectItem>
+                      {Array.isArray(clients) && clients.length > 0 ? (
+                        clients.map((client: Client) => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.name} ({client.email})
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>No clients available</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {user?.role === "admin" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCreateClient(true)}
+                      className="w-full border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Client
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
-            {/* If client, show their name as read-only */}
-            {user?.role === "client" && Array.isArray(clients) && clients.length > 0 && (
+
+            {/* Team Member Selection */}
+            {user?.role !== "client" && (
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right">Client</Label>
-                <div className="col-span-3">
-                  <Input value={clients[0].name} readOnly className="bg-gray-100" />
+                <Label htmlFor="teamMember" className="text-right">
+                  Team Member
+                </Label>
+                <div className="col-span-3 space-y-2">
+                  <Select
+                    value={formData.teamMemberId || "none"}
+                    onValueChange={(value) => setFormData({ ...formData, teamMemberId: value === "none" ? "" : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team member (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Team Member</SelectItem>
+                      {Array.isArray(teamMembers) && teamMembers.length > 0 ? (
+                        teamMembers.map((member: TeamMember) => (
+                          <SelectItem key={member.id} value={member.id}>
+                            {member.name} ({member.email}) {member.role && `- ${member.role}`}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>No team members available</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {user?.role === "admin" && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowCreateTeamMember(true)}
+                      className="w-full border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Team Member
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -380,12 +491,36 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || files.length === 0}>
+            <Button 
+              type="submit" 
+              disabled={loading || files.length === 0}
+              className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25"
+            >
               {loading ? "Uploading..." : "Upload Document"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
+      
+      {/* Create Team Member Dialog */}
+      <CreateTeamMemberDialog
+        open={showCreateTeamMember}
+        onOpenChange={setShowCreateTeamMember}
+        onSuccess={() => {
+          fetchTeamMembers()
+          setShowCreateTeamMember(false)
+        }}
+      />
+      
+      {/* Create Client Dialog */}
+      <CreateClientDialog
+        open={showCreateClient}
+        onOpenChange={setShowCreateClient}
+        onSuccess={() => {
+          fetchClients()
+          setShowCreateClient(false)
+        }}
+      />
     </Dialog>
   )
 }

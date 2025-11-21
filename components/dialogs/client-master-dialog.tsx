@@ -140,7 +140,7 @@ export function ClientMasterDialog({ client, open, onOpenChange, onSuccess }: Cl
 
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366F1] mx-auto"></div>
               <p className="mt-2 text-gray-600">Loading compliance data...</p>
             </div>
           ) : (
@@ -153,8 +153,8 @@ export function ClientMasterDialog({ client, open, onOpenChange, onSuccess }: Cl
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="text-center p-3 bg-blue-50 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">{complianceData.summary.total}</div>
+                      <div className="text-center p-3 bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 rounded-lg">
+                        <div className="text-2xl font-bold bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent">{complianceData.summary.total}</div>
                         <div className="text-sm text-gray-600">Total Items</div>
                       </div>
                       <div className="text-center p-3 bg-green-50 rounded-lg">
@@ -326,7 +326,7 @@ export function ClientMasterDialog({ client, open, onOpenChange, onSuccess }: Cl
           <Button 
             onClick={handleGenerateReport} 
             disabled={generatingReport}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25"
           >
             <Download className="h-4 w-4" />
             {generatingReport ? "Generating..." : "Generate Report"}

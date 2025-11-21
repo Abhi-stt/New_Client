@@ -293,7 +293,7 @@ export function SuperAdminDashboard() {
     switch (role) {
       case "super_admin": return "bg-red-100 text-red-800"
       case "admin": return "bg-purple-100 text-purple-800"
-      case "manager": return "bg-blue-100 text-blue-800"
+      case "manager": return "bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 text-[#6366F1]"
       case "team_member": return "bg-green-100 text-green-800"
       case "client": return "bg-gray-100 text-gray-800"
       default: return "bg-gray-100 text-gray-800"
@@ -314,7 +314,7 @@ export function SuperAdminDashboard() {
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case "pending": return "bg-yellow-100 text-yellow-800"
-      case "contacted": return "bg-blue-100 text-blue-800"
+      case "contacted": return "bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 text-[#6366F1]"
       case "completed": return "bg-green-100 text-green-800"
       case "cancelled": return "bg-red-100 text-red-800"
       default: return "bg-gray-100 text-gray-800"
@@ -426,10 +426,10 @@ export function SuperAdminDashboard() {
         <Card className="bg-white/80 backdrop-blur-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today's Activities</CardTitle>
-            <Activity className="h-4 w-4 text-blue-600" />
+            <Activity className="h-4 w-4 text-[#6366F1]" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.todayActivities}</div>
+            <div className="text-2xl font-bold bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent">{stats.todayActivities}</div>
             <p className="text-xs text-muted-foreground">System activities</p>
           </CardContent>
         </Card>
@@ -707,7 +707,7 @@ export function SuperAdminDashboard() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleUpdateDemoStatus(request._id, 'contacted')}
-                                    className="text-blue-600 hover:text-blue-700"
+                                    className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent hover:from-[#4F46E5] hover:to-[#9333EA]"
                                   >
                                     Mark Contacted
                                   </Button>

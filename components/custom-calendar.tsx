@@ -103,7 +103,7 @@ export function CustomCalendar({ events }: CustomCalendarProps) {
           <ChevronLeft className="w-5 h-5" />
         </Button>
         <div className="flex items-center gap-2 font-semibold text-lg">
-          <CalendarIcon className="w-5 h-5 text-blue-600" />
+          <CalendarIcon className="w-5 h-5 text-[#6366F1]" />
           {displayedMonthName} {currentYear}
         </div>
         <Button variant="ghost" size="icon" onClick={() => {
@@ -132,13 +132,13 @@ export function CustomCalendar({ events }: CustomCalendarProps) {
             <button
               key={idx}
               className={`relative h-16 w-full rounded-lg flex flex-col items-center justify-start p-1 border transition-all
-                ${isToday ? 'border-blue-500 ring-2 ring-blue-300' : 'border-gray-200'}
+                ${isToday ? 'border-[#6366F1] ring-2 ring-[#6366F1]/30' : 'border-gray-200'}
                 ${hasEvents ? getPriorityColor(dayPriority) + ' bg-opacity-20' : 'bg-white'}
-                hover:bg-blue-50 focus:outline-none`}
+                hover:bg-gradient-to-br hover:from-[#6366F1]/10 hover:to-[#A855F7]/10 focus:outline-none`}
               onClick={() => { if (hasEvents) { setSelectedDate(date); setShowModal(true); } }}
               title={hasEvents ? `${dayEvents.length} event(s)` : ''}
             >
-              <span className={`font-semibold text-base ${isToday ? 'text-blue-600' : 'text-gray-800'}`}>{date.getDate()}</span>
+              <span className={`font-semibold text-base ${isToday ? 'bg-gradient-to-r from-[#6366F1] to-[#A855F7] bg-clip-text text-transparent' : 'text-gray-800'}`}>{date.getDate()}</span>
               {/* Dot or badge for events */}
               {hasEvents && (
                 <span className={`absolute bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full ${getPriorityColor(dayPriority)}`}></span>
@@ -171,14 +171,14 @@ export function CustomCalendar({ events }: CustomCalendarProps) {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-              <CalendarIcon className="w-5 h-5 text-blue-600" />
+              <CalendarIcon className="w-5 h-5 text-[#6366F1]" />
               Events on {selectedDate?.toLocaleDateString()}
             </DialogTitle>
           </DialogHeader>
           {selectedEvents.length > 0 ? (
             <ul className="space-y-4">
               {selectedEvents.map(ev => (
-                <li key={ev.id} className="p-3 border rounded-lg shadow-sm bg-white hover:bg-blue-50 cursor-pointer">
+                <li key={ev.id} className="p-3 border rounded-lg shadow-sm bg-white hover:bg-gradient-to-br hover:from-[#6366F1]/10 hover:to-[#A855F7]/10 cursor-pointer">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-base text-gray-900">{ev.title}</span>
                     {getPriorityBadge(ev.priority)}
