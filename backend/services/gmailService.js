@@ -9,10 +9,23 @@ class GmailService {
   constructor() {
     // Gmail ALWAYS uses /api/email/gmail/callback - ignore generic GOOGLE_REDIRECT_URI
     // Use GMAIL_REDIRECT_URI if set, otherwise construct from backend URL
-    const backendUrl = process.env.BACKEND_URL || process.env.HOST_URL || 'http://localhost:5000';
+    // Check for Render environment variable first, then other env vars
+    const backendUrl = process.env.GMAIL_REDIRECT_URI 
+      ? process.env.GMAIL_REDIRECT_URI.replace('/api/email/gmail/callback', '')
+      : process.env.BACKEND_URL 
+      || process.env.HOST_URL 
+      || (process.env.RENDER_EXTERNAL_URL ? `https://${process.env.RENDER_EXTERNAL_URL}` : null)
+      || 'http://localhost:5000';
     const redirectUri = process.env.GMAIL_REDIRECT_URI || `${backendUrl}/api/email/gmail/callback`;
     
     console.log('Gmail OAuth Redirect URI:', redirectUri);
+    console.log('Backend URL detected:', backendUrl);
+    console.log('Environment variables:', {
+      GMAIL_REDIRECT_URI: process.env.GMAIL_REDIRECT_URI ? 'SET' : 'NOT SET',
+      BACKEND_URL: process.env.BACKEND_URL ? 'SET' : 'NOT SET',
+      HOST_URL: process.env.HOST_URL ? 'SET' : 'NOT SET',
+      RENDER_EXTERNAL_URL: process.env.RENDER_EXTERNAL_URL || 'NOT SET'
+    });
     
     this.oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
@@ -24,7 +37,13 @@ class GmailService {
   // Generate OAuth2 URL for Gmail
   getAuthUrl(userId) {
     // Gmail ALWAYS uses /api/email/gmail/callback - force this regardless of GOOGLE_REDIRECT_URI
-    const backendUrl = process.env.BACKEND_URL || process.env.HOST_URL || 'http://localhost:5000';
+    // Check for Render environment variable first, then other env vars
+    const backendUrl = process.env.GMAIL_REDIRECT_URI 
+      ? process.env.GMAIL_REDIRECT_URI.replace('/api/email/gmail/callback', '')
+      : process.env.BACKEND_URL 
+      || process.env.HOST_URL 
+      || (process.env.RENDER_EXTERNAL_URL ? `https://${process.env.RENDER_EXTERNAL_URL}` : null)
+      || 'http://localhost:5000';
     const redirectUri = process.env.GMAIL_REDIRECT_URI || `${backendUrl}/api/email/gmail/callback`;
     
     // Always recreate OAuth2 client with correct redirect URI for Gmail
@@ -36,6 +55,7 @@ class GmailService {
     
     console.log('Gmail OAuth - Generating auth URL for user:', userId);
     console.log('Gmail OAuth - Redirect URI (forced):', redirectUri);
+    console.log('Gmail OAuth - Backend URL:', backendUrl);
     
     const scopes = [
       'https://www.googleapis.com/auth/gmail.readonly',
@@ -61,7 +81,13 @@ class GmailService {
   async exchangeCodeForTokens(code, userId) {
     try {
       // Ensure OAuth2 client has correct redirect URI before exchanging token
-      const backendUrl = process.env.BACKEND_URL || process.env.HOST_URL || 'http://localhost:5000';
+      // Check for Render environment variable first, then other env vars
+      const backendUrl = process.env.GMAIL_REDIRECT_URI 
+        ? process.env.GMAIL_REDIRECT_URI.replace('/api/email/gmail/callback', '')
+        : process.env.BACKEND_URL 
+        || process.env.HOST_URL 
+        || (process.env.RENDER_EXTERNAL_URL ? `https://${process.env.RENDER_EXTERNAL_URL}` : null)
+        || 'http://localhost:5000';
       const redirectUri = process.env.GMAIL_REDIRECT_URI || `${backendUrl}/api/email/gmail/callback`;
       
       // Recreate OAuth2 client with correct redirect URI
