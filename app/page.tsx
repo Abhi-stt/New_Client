@@ -79,12 +79,8 @@ export default function HomePage() {
   const [signupError, setSignupError] = useState("")
   const [signupLoading, setSignupLoading] = useState(false)
 
-  // Redirect to dashboard if user is logged in
-  useEffect(() => {
-    if (!authLoading && user) {
-      router.push("/dashboard")
-    }
-  }, [user, authLoading, router])
+  // Allow users to view home page even when logged in (for pricing plans)
+  // Only redirect after explicit login/signup actions, not automatically
 
   // Demo request form state
   const [demoForm, setDemoForm] = useState({

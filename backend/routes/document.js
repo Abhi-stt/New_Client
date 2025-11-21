@@ -172,14 +172,22 @@ router.delete('/:id', async (req, res) => {
 // File upload route
 router.post('/upload', upload.array('files'), async (req, res) => {
   try {
-    const { name, description, type, clientId, firmId, syncWithGoogleSheets, syncWithSharePoint, googleSheetsUrl, sharePointUrl, userId } = req.body;
+    const { name, description, type, clientId, teamMemberId, firmId, syncWithGoogleSheets, syncWithSharePoint, googleSheetsUrl, sharePointUrl, userId } = req.body;
     
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required for document upload' });
     }
     
+    if (!name || !type) {
+      return res.status(400).json({ error: 'Document name and type are required' });
+    }
+    
     // Get admin domain for the uploader
     const userAdminId = await getUserAdminId(userId);
+    
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'At least one file is required' });
+    }
     
     const files = req.files.map(file => ({
       filename: file.filename,
@@ -192,23 +200,35 @@ router.post('/upload', upload.array('files'), async (req, res) => {
     // Set ownership fields for data isolation
     const ownershipFields = setOwnershipFields('admin', userId, userAdminId);
 
-    // Accept clientId as either a Client _id or a User _id (for client users without a Client entity)
-    // No strict validation on clientId
-    const document = new Document({
+    // Accept clientId and teamMemberId as optional - only include if provided and not empty
+    const documentData = {
       name,
-      description,
+      description: description || '',
       type,
-      clientId, // can be a Client or User _id
-      firmId,
-      syncWithGoogleSheets,
-      syncWithSharePoint,
-      googleSheetsUrl,
-      sharePointUrl,
+      syncWithGoogleSheets: syncWithGoogleSheets === 'true' || syncWithGoogleSheets === true,
+      syncWithSharePoint: syncWithSharePoint === 'true' || syncWithSharePoint === true,
+      googleSheetsUrl: googleSheetsUrl || '',
+      sharePointUrl: sharePointUrl || '',
       files,
       uploadedBy: userId,
       status: 'pending',
       ...ownershipFields
-    });
+    };
+    
+    // Only add clientId if provided and not empty
+    if (clientId && clientId !== 'none' && clientId !== '') {
+      documentData.clientId = clientId;
+    }
+    
+    // Only add firmId if provided and not empty
+    if (firmId && firmId !== 'none' && firmId !== '') {
+      documentData.firmId = firmId;
+    }
+    
+    // Note: teamMemberId is not in Document schema, but we can store it in metadata if needed
+    // For now, we'll just ignore it as it's not part of the schema
+    
+    const document = new Document(documentData);
     
     await document.save();
     

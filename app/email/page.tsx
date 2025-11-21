@@ -16,8 +16,9 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Mail, MailOpen, Paperclip, Filter, Plus, Settings, RefreshCw, AlertCircle, Trash2, Edit, Forward } from 'lucide-react';
+import { Mail, MailOpen, Paperclip, Filter, Plus, Settings, RefreshCw, AlertCircle, Trash2, Edit, Forward, Calendar, ClipboardList } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { TaskCreationDialog } from '@/components/dialogs/task-creation-dialog';
 
 interface EmailAccount {
   connected: boolean;
@@ -79,6 +80,8 @@ export default function EmailPage() {
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
   const [showForwardDialog, setShowForwardDialog] = useState(false);
   const [emailToForward, setEmailToForward] = useState<Email | null>(null);
+  const [showCreateTaskDialog, setShowCreateTaskDialog] = useState(false);
+  const [emailForTask, setEmailForTask] = useState<Email | null>(null);
   const [filters, setFilters] = useState({
     sender: '',
     subject: '',
@@ -422,7 +425,7 @@ export default function EmailPage() {
       console.error('Error forwarding email:', error);
       toast({
         title: "Error",
-        description: `Failed to forward email: ${error.message}`,
+        description: `Failed to forward email: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     }
@@ -431,6 +434,19 @@ export default function EmailPage() {
   const handleForwardEmail = (email: Email) => {
     setEmailToForward(email);
     setShowForwardDialog(true);
+  };
+
+  const handleCreateTaskFromEmail = (email: Email) => {
+    setEmailForTask(email);
+    setShowCreateTaskDialog(true);
+  };
+
+  const handleShowMeetings = () => {
+    router.push('/calendar');
+  };
+
+  const handleShowTasks = () => {
+    router.push('/tasks');
   };
 
   const formatDate = (dateString: string) => {
@@ -712,9 +728,22 @@ export default function EmailPage() {
                                 size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  handleCreateTaskFromEmail(email);
+                                }}
+                                className="h-6 w-6 sm:h-8 sm:w-8 p-0"
+                                title="Create Task from Email"
+                              >
+                                <ClipboardList className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 hover:text-[#6366F1]" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   handleForwardEmail(email);
                                 }}
                                 className="h-6 w-6 sm:h-8 sm:w-8 p-0"
+                                title="Forward Email"
                               >
                                 <Forward className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 hover:text-[#6366F1]" />
                               </Button>
@@ -964,6 +993,29 @@ export default function EmailPage() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t">
+              <Button 
+                variant="outline" 
+                onClick={handleShowMeetings}
+                className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]"
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Show Meetings
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={handleShowTasks}
+                className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]"
+              >
+                <ClipboardList className="w-4 h-4 mr-2" />
+                Show Tasks
+              </Button>
+              <Button 
+                onClick={() => handleCreateTaskFromEmail(selectedEmail)}
+                className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25"
+              >
+                <ClipboardList className="w-4 h-4 mr-2" />
+                Create Task from Mail
+              </Button>
               <Button variant="outline" onClick={() => setShowEmailModal(false)} className="w-full sm:w-auto">
                 Close
               </Button>
@@ -1043,6 +1095,27 @@ export default function EmailPage() {
             />
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Create Task from Email Dialog */}
+      {emailForTask && (
+        <TaskCreationDialog
+          open={showCreateTaskDialog}
+          onOpenChange={(open) => {
+            setShowCreateTaskDialog(open);
+            if (!open) {
+              setEmailForTask(null);
+            }
+          }}
+          onSuccess={() => {
+            setShowCreateTaskDialog(false);
+            setEmailForTask(null);
+            toast({
+              title: "Success",
+              description: "Task created from email successfully",
+            });
+          }}
+        />
       )}
       </div>
     </DashboardLayout>

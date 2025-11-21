@@ -197,10 +197,18 @@ export function FileUploadDialog({ open, onOpenChange, onSuccess }: FileUploadDi
     try {
       const uploadData = new FormData()
 
-      // Append form data
+      // Append form data - make clientId and teamMemberId optional
       Object.entries(formData).forEach(([key, value]) => {
-        if (key === 'firmId' && !value) return; // Skip empty firmId
-        uploadData.append(key, value.toString())
+        // Skip empty optional fields
+        if ((key === 'firmId' || key === 'clientId' || key === 'teamMemberId') && (!value || value === 'none')) {
+          return;
+        }
+        // Skip empty strings for optional fields
+        if (value === '' && (key === 'description' || key === 'googleSheetsUrl' || key === 'sharePointUrl')) {
+          uploadData.append(key, '');
+        } else if (value !== '' && value !== 'none') {
+          uploadData.append(key, value.toString());
+        }
       })
 
       // Add userId for role-based filtering

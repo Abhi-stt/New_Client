@@ -27,6 +27,10 @@ router.post('/users', sanitizeInput, validateUser, async (req, res) => {
     const { name, email, password, role, phone, managerId, clientIds, firmIds } = req.body;
     const { userId: createdBy } = req.query;
 
+    if (!createdBy) {
+      return res.status(400).json({ error: 'Creator user ID is required' });
+    }
+
     // Check if email is unique across users and clients
     const emailCheck = await checkEmailUnique(email);
     if (!emailCheck.isValid) {
@@ -43,35 +47,58 @@ router.post('/users', sanitizeInput, validateUser, async (req, res) => {
     };
 
     const currentUser = await User.findById(createdBy);
+    if (!currentUser) {
+      return res.status(404).json({ error: 'Creator user not found' });
+    }
+
     if (currentUser && !roleHierarchy[currentUser.role]?.includes(role)) {
       return res.status(403).json({ error: `You cannot create users with ${role} role` });
     }
+
+    // Get admin domain for ownership
+    const { getUserAdminId, setOwnershipFields } = require('../utils/accessControl');
+    const userAdminId = await getUserAdminId(createdBy);
+    const ownershipFields = setOwnershipFields(currentUser.role, createdBy, userAdminId);
 
     const newUser = new User({
       name,
       email,
       password, // In production, hash this password
       role,
-      phone,
-      managerId,
-      clientIds,
-      firmIds,
-      createdBy
+      phone: phone || '',
+      managerId: managerId || null,
+      clientIds: clientIds || [],
+      firmIds: firmIds || [],
+      createdBy,
+      status: 'active', // Set default status
+      ...ownershipFields
     });
 
     await newUser.save();
 
     // Log the activity
-    await new UserActivity({
-      userId: createdBy,
-      action: 'create_user',
-      description: `Created new user: ${name} (${email}) with role: ${role}`,
-      metadata: { createdUserId: newUser._id, role, email }
-    }).save();
+    try {
+      await new UserActivity({
+        userId: createdBy,
+        adminId: userAdminId,
+        action: 'create_user',
+        description: `Created new user: ${name} (${email}) with role: ${role}`,
+        metadata: { createdUserId: newUser._id, role, email }
+      }).save();
+    } catch (activityError) {
+      console.error('Failed to log activity (non-blocking):', activityError);
+    }
 
-    res.status(201).json({ message: 'User created successfully', user: newUser });
+    res.status(201).json({ 
+      message: 'User created successfully', 
+      user: {
+        ...newUser.toObject(),
+        id: newUser._id
+      }
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Super admin create user error:', error);
+    res.status(500).json({ error: error.message || 'Failed to create user' });
   }
 });
 

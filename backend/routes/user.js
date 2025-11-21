@@ -170,7 +170,7 @@ router.get('/', async (req, res) => {
 // Create a new user (team member)
 router.post('/', sanitizeInput, validateUser, async (req, res) => {
   try {
-    const { name, email, password, role, phone, managerId } = req.body;
+    const { name, email, password, role, phone, managerId, status } = req.body;
     
     // Get current user for ownership (from middleware or query params)
     const { role: queryRole, userId: queryUserId } = req.query;
@@ -195,20 +195,35 @@ router.post('/', sanitizeInput, validateUser, async (req, res) => {
       email,
       password,
       role,
-      phone,
-      managerId,
-      status: 'active',
+      phone: phone || '',
+      managerId: managerId || null,
+      status: status || 'active',
       ...ownershipFields
     });
     
     await user.save();
+    
+    // Log activity if UserActivity schema exists
+    try {
+      const UserActivity = require('../schemas/UserActivity');
+      await new UserActivity({
+        userId: currentUser.id,
+        adminId: userAdminId,
+        action: 'create_user',
+        description: `Created new user: ${name} (${email}) with role: ${role}`,
+        metadata: { createdUserId: user._id, role, email }
+      }).save();
+    } catch (activityError) {
+      console.error('Failed to log activity (non-blocking):', activityError);
+    }
     
     res.status(201).json({
       ...user.toObject(),
       id: user._id,
     });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('Create user error:', err);
+    res.status(400).json({ error: err.message || 'Failed to create user' });
   }
 });
 
