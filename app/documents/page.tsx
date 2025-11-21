@@ -467,14 +467,14 @@ export default function DocumentsPage() {
           </div>
           <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
             {canUploadDocuments && (
-              <Button onClick={() => setShowUploadDialog(true)} className="w-full sm:w-auto">
+              <Button onClick={() => setShowUploadDialog(true)} className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
                 <Upload className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Upload Document</span>
                 <span className="sm:hidden">Upload</span>
               </Button>
             )}
             {canRequestDocuments && (
-              <Button variant="outline" onClick={() => setShowRequestDialog(true)} className="w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setShowRequestDialog(true)} className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]">
                 <FileText className="mr-2 h-4 w-4" />
                 <span className="hidden sm:inline">Request Document</span>
                 <span className="sm:hidden">Request</span>

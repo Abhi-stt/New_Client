@@ -460,7 +460,7 @@ export default function EmailPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button onClick={connectGmail} className="w-full">
+                <Button onClick={connectGmail} className="w-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
                   <Mail className="w-4 h-4 mr-2" />
                   Connect Gmail
                 </Button>
@@ -706,7 +706,7 @@ export default function EmailPage() {
             <h2 className="text-xl sm:text-2xl font-bold">Forwarding Rules</h2>
             <Dialog open={showCreateRule} onOpenChange={setShowCreateRule}>
               <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
                   <Plus className="w-4 h-4 mr-2" />
                   <span className="hidden sm:inline">Create Rule</span>
                   <span className="sm:hidden">New Rule</span>
@@ -1232,7 +1232,7 @@ function CreateRuleForm({ rule, onSubmit, onCancel }: {
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit">
+        <Button type="submit" className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
           {rule ? 'Update Rule' : 'Create Rule'}
         </Button>
       </div>
@@ -1361,7 +1361,7 @@ function ForwardEmailForm({ email, onSubmit, onCancel }: {
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit">
+        <Button type="submit" className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
           Forward Email
         </Button>
       </div>

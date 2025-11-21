@@ -87,7 +87,7 @@ export default function FirmsPage() {
             <h1 className="text-2xl font-bold text-gray-900">My Firms</h1>
             <p className="text-gray-600">Manage your business entities and compliance</p>
           </div>
-          <Button onClick={() => setShowCreateDialog(true)}>
+          <Button onClick={() => setShowCreateDialog(true)} className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
             <Plus className="mr-2 h-4 w-4" />
             Add Firm
           </Button>

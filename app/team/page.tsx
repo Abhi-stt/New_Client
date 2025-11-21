@@ -164,7 +164,7 @@ export default function TeamPage() {
               </p>
             </div>
             {canManageTeam && (
-              <Button onClick={() => setShowCreateDialog(true)} size="lg" className="w-full sm:w-auto">
+              <Button onClick={() => setShowCreateDialog(true)} size="lg" className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
                 <Plus className="mr-2 h-5 w-5" />
                 <span className="hidden sm:inline">Add Team Member</span>
                 <span className="sm:hidden">Add Member</span>

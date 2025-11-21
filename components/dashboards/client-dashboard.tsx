@@ -52,15 +52,15 @@ export function ClientDashboard() {
           <p className="text-gray-600">Manage your firms and compliance requirements</p>
         </div>
         <div className="flex space-x-2">
-          <Button onClick={() => window.location.href = '/tasks'}>
+          <Button onClick={() => window.location.href = '/tasks'} className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
             <FileText className="mr-2 h-4 w-4" />
             My Tasks
           </Button>
-          <Button>
+          <Button className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
             <Upload className="mr-2 h-4 w-4" />
             Upload Document
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" className="border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]">
             <MessageSquare className="mr-2 h-4 w-4" />
             Ask Query
           </Button>

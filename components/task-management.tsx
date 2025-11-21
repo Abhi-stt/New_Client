@@ -282,7 +282,7 @@ export function TaskManagement() {
           <h1 className="text-xl sm:text-2xl font-bold">Task Management</h1>
           <p className="text-sm sm:text-base text-gray-600">Manage your tasks and track progress</p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
+        <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
           <Plus className="h-4 w-4 mr-2" />
           <span className="hidden sm:inline">Create Task</span>
           <span className="sm:hidden">New Task</span>
