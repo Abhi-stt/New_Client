@@ -10,12 +10,21 @@ class GmailService {
     // Gmail ALWAYS uses /api/email/gmail/callback - ignore generic GOOGLE_REDIRECT_URI
     // Use GMAIL_REDIRECT_URI if set, otherwise construct from backend URL
     // Check for Render environment variable first, then other env vars
-    const backendUrl = process.env.GMAIL_REDIRECT_URI 
-      ? process.env.GMAIL_REDIRECT_URI.replace('/api/email/gmail/callback', '')
-      : process.env.BACKEND_URL 
-      || process.env.HOST_URL 
-      || (process.env.RENDER_EXTERNAL_URL ? `https://${process.env.RENDER_EXTERNAL_URL}` : null)
-      || 'http://localhost:5000';
+    // RENDER_EXTERNAL_URL already includes https://, so don't add it again
+    let backendUrl;
+    if (process.env.GMAIL_REDIRECT_URI) {
+      backendUrl = process.env.GMAIL_REDIRECT_URI.replace('/api/email/gmail/callback', '');
+    } else if (process.env.BACKEND_URL) {
+      backendUrl = process.env.BACKEND_URL;
+    } else if (process.env.HOST_URL) {
+      backendUrl = process.env.HOST_URL;
+    } else if (process.env.RENDER_EXTERNAL_URL) {
+      // RENDER_EXTERNAL_URL already includes https://
+      backendUrl = process.env.RENDER_EXTERNAL_URL;
+    } else {
+      backendUrl = 'http://localhost:5000';
+    }
+    
     const redirectUri = process.env.GMAIL_REDIRECT_URI || `${backendUrl}/api/email/gmail/callback`;
     
     console.log('Gmail OAuth Redirect URI:', redirectUri);
@@ -38,12 +47,21 @@ class GmailService {
   getAuthUrl(userId) {
     // Gmail ALWAYS uses /api/email/gmail/callback - force this regardless of GOOGLE_REDIRECT_URI
     // Check for Render environment variable first, then other env vars
-    const backendUrl = process.env.GMAIL_REDIRECT_URI 
-      ? process.env.GMAIL_REDIRECT_URI.replace('/api/email/gmail/callback', '')
-      : process.env.BACKEND_URL 
-      || process.env.HOST_URL 
-      || (process.env.RENDER_EXTERNAL_URL ? `https://${process.env.RENDER_EXTERNAL_URL}` : null)
-      || 'http://localhost:5000';
+    // RENDER_EXTERNAL_URL already includes https://, so don't add it again
+    let backendUrl;
+    if (process.env.GMAIL_REDIRECT_URI) {
+      backendUrl = process.env.GMAIL_REDIRECT_URI.replace('/api/email/gmail/callback', '');
+    } else if (process.env.BACKEND_URL) {
+      backendUrl = process.env.BACKEND_URL;
+    } else if (process.env.HOST_URL) {
+      backendUrl = process.env.HOST_URL;
+    } else if (process.env.RENDER_EXTERNAL_URL) {
+      // RENDER_EXTERNAL_URL already includes https://
+      backendUrl = process.env.RENDER_EXTERNAL_URL;
+    } else {
+      backendUrl = 'http://localhost:5000';
+    }
+    
     const redirectUri = process.env.GMAIL_REDIRECT_URI || `${backendUrl}/api/email/gmail/callback`;
     
     // Always recreate OAuth2 client with correct redirect URI for Gmail
@@ -82,12 +100,21 @@ class GmailService {
     try {
       // Ensure OAuth2 client has correct redirect URI before exchanging token
       // Check for Render environment variable first, then other env vars
-      const backendUrl = process.env.GMAIL_REDIRECT_URI 
-        ? process.env.GMAIL_REDIRECT_URI.replace('/api/email/gmail/callback', '')
-        : process.env.BACKEND_URL 
-        || process.env.HOST_URL 
-        || (process.env.RENDER_EXTERNAL_URL ? `https://${process.env.RENDER_EXTERNAL_URL}` : null)
-        || 'http://localhost:5000';
+      // RENDER_EXTERNAL_URL already includes https://, so don't add it again
+      let backendUrl;
+      if (process.env.GMAIL_REDIRECT_URI) {
+        backendUrl = process.env.GMAIL_REDIRECT_URI.replace('/api/email/gmail/callback', '');
+      } else if (process.env.BACKEND_URL) {
+        backendUrl = process.env.BACKEND_URL;
+      } else if (process.env.HOST_URL) {
+        backendUrl = process.env.HOST_URL;
+      } else if (process.env.RENDER_EXTERNAL_URL) {
+        // RENDER_EXTERNAL_URL already includes https://
+        backendUrl = process.env.RENDER_EXTERNAL_URL;
+      } else {
+        backendUrl = 'http://localhost:5000';
+      }
+      
       const redirectUri = process.env.GMAIL_REDIRECT_URI || `${backendUrl}/api/email/gmail/callback`;
       
       // Recreate OAuth2 client with correct redirect URI
