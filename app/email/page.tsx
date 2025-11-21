@@ -477,7 +477,7 @@ export default function EmailPage() {
         </div>
         <div className="flex gap-2">
           {emailAccount.connected && (
-            <Button onClick={syncEmails} disabled={loading} variant="outline" className="w-full sm:w-auto">
+            <Button onClick={syncEmails} disabled={loading} variant="outline" className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]">
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Sync Emails</span>
               <span className="sm:hidden">Sync</span>
@@ -590,7 +590,7 @@ export default function EmailPage() {
                       </Select>
                     </div>
                     <div className="flex items-end">
-                      <Button onClick={loadEmails} className="w-full">
+                      <Button onClick={loadEmails} className="w-full bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
                         Apply Filters
                       </Button>
                     </div>
@@ -608,6 +608,7 @@ export default function EmailPage() {
                       variant="outline" 
                       size="sm"
                       disabled={loading}
+                      className="border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]"
                     >
                       <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                       Refresh
