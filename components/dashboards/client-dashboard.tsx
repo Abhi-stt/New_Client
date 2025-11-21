@@ -9,6 +9,8 @@ import { Progress } from "@/components/ui/progress"
 import { FileText, Building, Users, Calendar, MessageSquare, Upload, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { HOST_URL } from "@/lib/api"
+import { FileUploadDialog } from "@/components/dialogs/file-upload-dialog"
+import { CreateQueryDialog } from "@/components/dialogs/create-query-dialog"
 
 export function ClientDashboard() {
   const { user } = useAuth()
@@ -25,6 +27,8 @@ export function ClientDashboard() {
   const [recentDocuments, setRecentDocuments] = useState([])
   const [upcomingDeadlines, setUpcomingDeadlines] = useState([])
   const [pendingRequests, setPendingRequests] = useState([])
+  const [showUploadDialog, setShowUploadDialog] = useState(false)
+  const [showCreateQueryDialog, setShowCreateQueryDialog] = useState(false)
 
   useEffect(() => {
     fetchDashboardData()
@@ -52,15 +56,15 @@ export function ClientDashboard() {
           <p className="text-gray-600">Manage your firms and compliance requirements</p>
         </div>
         <div className="flex space-x-2">
-          <Button onClick={() => window.location.href = '/tasks'} className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
+          <Button onClick={() => router.push('/tasks')} className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
             <FileText className="mr-2 h-4 w-4" />
             My Tasks
           </Button>
-          <Button className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
+          <Button onClick={() => setShowUploadDialog(true)} className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
             <Upload className="mr-2 h-4 w-4" />
             Upload Document
           </Button>
-          <Button variant="outline" className="border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]">
+          <Button onClick={() => setShowCreateQueryDialog(true)} variant="outline" className="border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]">
             <MessageSquare className="mr-2 h-4 w-4" />
             Ask Query
           </Button>
@@ -194,7 +198,7 @@ export function ClientDashboard() {
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge variant={request.priority === "high" ? "destructive" : "default"}>{request.priority}</Badge>
-                    <Button size="sm">
+                    <Button size="sm" onClick={() => setShowUploadDialog(true)}>
                       <Upload className="mr-2 h-4 w-4" />
                       Upload
                     </Button>
@@ -242,6 +246,22 @@ export function ClientDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialogs */}
+      <FileUploadDialog 
+        open={showUploadDialog} 
+        onOpenChange={setShowUploadDialog} 
+        onSuccess={() => {
+          fetchDashboardData()
+        }} 
+      />
+      <CreateQueryDialog 
+        open={showCreateQueryDialog} 
+        onOpenChange={setShowCreateQueryDialog} 
+        onSuccess={() => {
+          fetchDashboardData()
+        }} 
+      />
     </div>
   )
 }

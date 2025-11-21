@@ -139,6 +139,10 @@ export function TaskCreationDialog({
       // Ensure data is an array before setting
       if (Array.isArray(data)) {
         setClients(data)
+        // For client role, automatically set the clientId to their own Client document ID
+        if (user?.role === "client" && data.length > 0) {
+          setTaskForm(prev => ({ ...prev, clientId: data[0].id || data[0]._id }))
+        }
       } else {
         console.error('Expected array but got:', data)
         setClients([])
@@ -176,6 +180,12 @@ export function TaskCreationDialog({
         return
       }
 
+      // For client role, ensure clientId is set from their Client document
+      let clientIdToUse = taskForm.clientId !== "none" ? taskForm.clientId : undefined
+      if (user?.role === "client" && Array.isArray(clients) && clients.length > 0) {
+        clientIdToUse = clients[0].id || clients[0]._id
+      }
+
       const response = await fetch(api.tasks, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -185,7 +195,7 @@ export function TaskCreationDialog({
           createdBy: user?.id,
           dueDate: taskForm.dueDate ? new Date(taskForm.dueDate) : undefined,
           estimatedHours: taskForm.estimatedHours && taskForm.estimatedHours.trim() !== '' ? parseInt(taskForm.estimatedHours) : undefined,
-          clientId: taskForm.clientId !== "none" ? taskForm.clientId : undefined,
+          clientId: clientIdToUse,
           serviceId: taskForm.serviceId !== "none" ? taskForm.serviceId : undefined,
           tags: taskForm.tags && taskForm.tags.trim() !== '' ? taskForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== '') : undefined,
           isRecurring: taskForm.isRecurring,
