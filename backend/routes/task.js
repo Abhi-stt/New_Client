@@ -9,15 +9,40 @@ const router = express.Router();
 // Create a new task
 router.post('/', async (req, res) => {
   try {
-    const { createdBy, assigneeId, serviceId, estimatedHours, dueDate, tags, ...taskData } = req.body;
+    console.log('Create task request body:', JSON.stringify(req.body, null, 2))
+    const { createdBy, assigneeId, serviceId, estimatedHours, dueDate, tags, title, ...taskData } = req.body;
     
     // Validate required fields
-    if (!createdBy || !assigneeId) {
-      return res.status(400).json({ error: 'createdBy and assigneeId are required' });
+    if (!createdBy) {
+      console.error('Validation failed: createdBy is required')
+      return res.status(400).json({ error: 'createdBy is required' });
     }
+    
+    if (!title || title.trim() === '') {
+      console.error('Validation failed: title is required')
+      return res.status(400).json({ error: 'title is required' });
+    }
+    
+    // Validate ObjectId formats
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(createdBy)) {
+      console.error('Validation failed: createdBy is not a valid ObjectId:', createdBy)
+      return res.status(400).json({ error: 'Invalid createdBy format' });
+    }
+    
+    // If no assigneeId provided, default to the creator (self-assigned task)
+    const finalAssigneeId = assigneeId || createdBy;
+    
+    if (!mongoose.Types.ObjectId.isValid(finalAssigneeId)) {
+      console.error('Validation failed: assigneeId is not a valid ObjectId:', finalAssigneeId)
+      return res.status(400).json({ error: 'Invalid assigneeId format' });
+    }
+    
+    console.log('Final assigneeId:', finalAssigneeId)
     
     // Get admin domain for the creator
     const userAdminId = await getUserAdminId(createdBy);
+    console.log('User admin ID:', userAdminId)
     
     // Set ownership fields
     const ownershipFields = {
@@ -27,11 +52,39 @@ router.post('/', async (req, res) => {
     // Validate and clean optional fields
     const cleanData = {
       ...taskData,
+      title: title.trim(),
       createdBy,
-      assigneeId,
-      serviceId: serviceId || undefined,
+      assigneeId: finalAssigneeId,
       ...ownershipFields
     };
+    
+    // Only include serviceId if it's provided and valid ObjectId
+    if (serviceId && serviceId !== '' && serviceId !== 'none' && mongoose.Types.ObjectId.isValid(serviceId)) {
+      cleanData.serviceId = serviceId;
+    }
+    
+    // Only include clientId if it's provided and valid ObjectId
+    if (cleanData.clientId && cleanData.clientId !== '' && cleanData.clientId !== 'none') {
+      if (mongoose.Types.ObjectId.isValid(cleanData.clientId)) {
+        // Keep it
+      } else {
+        console.warn('Invalid clientId format, removing:', cleanData.clientId);
+        delete cleanData.clientId;
+      }
+    } else {
+      delete cleanData.clientId;
+    }
+    
+    // Clean up any undefined values
+    Object.keys(cleanData).forEach(key => {
+      if (cleanData[key] === undefined || cleanData[key] === null || cleanData[key] === '') {
+        if (key !== 'description' && key !== 'dueDate') {
+          delete cleanData[key];
+        }
+      }
+    });
+    
+    console.log('Clean task data:', JSON.stringify({ ...cleanData, clientId: cleanData.clientId || 'none' }, null, 2))
 
     // Handle estimatedHours - only set if it's a valid positive number
     if (estimatedHours && !isNaN(estimatedHours) && estimatedHours > 0) {
@@ -52,21 +105,28 @@ router.post('/', async (req, res) => {
     }
 
     // Create the task
+    console.log('Creating task with data:', JSON.stringify({ ...cleanData, clientId: cleanData.clientId || 'none' }, null, 2))
     const task = new Task(cleanData);
     
     await task.save();
+    console.log('Task created successfully:', task._id)
     
     // Log activity
-    await new UserActivity({
-      userId: createdBy,
-      action: 'create_task',
-      description: `Created task: ${task.title}`,
-      metadata: { 
-        taskId: task._id, 
-        assigneeId: assigneeId,
-        serviceId: serviceId 
-      }
-    }).save();
+    try {
+      await new UserActivity({
+        userId: createdBy,
+        adminId: userAdminId,
+        action: 'create_task',
+        description: `Created task: ${task.title}`,
+        metadata: { 
+          taskId: task._id, 
+          assigneeId: finalAssigneeId,
+          serviceId: serviceId 
+        }
+      }).save();
+    } catch (activityError) {
+      console.error('Failed to log activity (non-blocking):', activityError);
+    }
 
     // Populate the response
     const populatedTask = await Task.findById(task._id)
@@ -81,7 +141,31 @@ router.post('/', async (req, res) => {
     });
   } catch (err) {
     console.error('Task creation error:', err);
-    res.status(400).json({ error: err.message });
+    console.error('Error name:', err.name);
+    console.error('Error message:', err.message);
+    if (err.errors) {
+      console.error('Error details:', JSON.stringify(err.errors, null, 2));
+    }
+    
+    // Return detailed error for validation failures
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+        console.error(`Validation error for ${key}:`, err.errors[key].message);
+      });
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: validationErrors,
+        message: err.message
+      });
+    }
+    
+    res.status(400).json({ 
+      error: err.message || 'Failed to create task',
+      details: err.errors || {},
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 });
 

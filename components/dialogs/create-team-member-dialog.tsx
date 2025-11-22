@@ -111,23 +111,35 @@ export function CreateTeamMemberDialog({ open, onOpenChange, onSuccess }: Create
 
     try {
       // Prepare team member data from form state
-      const payload = {
-        name: formState.name.value,
-        email: formState.email.value,
-        phone: formState.phone.value,
+      const payload: any = {
+        name: formState.name.value.trim(),
+        email: formState.email.value.trim(),
         password: formState.password.value,
         role: formState.role.value,
         status: "active",
-        managerId: user?.role === "manager" ? user.id : formState.managerId.value,
       }
       
-      if (!payload.managerId) delete payload.managerId;
+      // Only include phone if it has a value
+      if (formState.phone.value && formState.phone.value.trim() !== '') {
+        payload.phone = formState.phone.value.trim()
+      }
+      
+      // Handle managerId - set it if manager role, or if admin selected a manager
+      if (user?.role === "manager") {
+        payload.managerId = user.id
+      } else if (formState.managerId.value && formState.managerId.value.trim() !== '' && formState.managerId.value !== 'none') {
+        payload.managerId = formState.managerId.value
+      }
 
+      console.log('Creating team member with payload:', payload)
+      
       const response = await fetch(`${HOST_URL}/api/users?role=${user?.role}&userId=${user?.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
+      
+      console.log('Response status:', response.status)
 
       if (response.ok) {
         toast({
@@ -139,6 +151,8 @@ export function CreateTeamMemberDialog({ open, onOpenChange, onSuccess }: Create
         resetForm()
       } else {
         const error = await response.json()
+        console.error('Team member creation error:', error)
+        
         // Show user-friendly error messages
         let errorMessage = "Failed to create team member"
         
@@ -148,8 +162,11 @@ export function CreateTeamMemberDialog({ open, onOpenChange, onSuccess }: Create
           errorMessage = "Please select a manager for this team member."
         } else if (error.details) {
           // Show the first validation error from server
-          const firstError = Object.values(error.details)[0]
-          errorMessage = Array.isArray(firstError) ? firstError[0] : firstError
+          const firstErrorKey = Object.keys(error.details)[0]
+          const firstErrorValue = error.details[firstErrorKey]
+          errorMessage = `${firstErrorKey}: ${Array.isArray(firstErrorValue) ? firstErrorValue[0] : firstErrorValue}`
+        } else if (error.error && typeof error.error === 'string') {
+          errorMessage = error.error
         } else if (error.message) {
           errorMessage = error.message
         }
@@ -351,39 +368,54 @@ export function CreateTeamMemberDialog({ open, onOpenChange, onSuccess }: Create
                 {user?.role === "admin" && formState.role.value === "team_member" && (
                   <div className="space-y-2">
                     <Label htmlFor="manager" className="text-sm font-medium text-gray-700">
-                      Assign Manager
-                      {Array.isArray(managers) && managers.length > 0 && <span className="text-red-500 ml-1">*</span>}
+                      Assign Manager (Optional)
                     </Label>
-                    <Select
-                      value={formState.managerId.value}
-                      onValueChange={(value) => setFieldValue('managerId', value)}
-                    >
-                      <SelectTrigger className={`h-11 ${errors.managerId ? 'border-red-500' : 'border-gray-300'}`}>
-                        <SelectValue placeholder={
-                          Array.isArray(managers) && managers.length > 0 
-                            ? "Select manager" 
-                            : "No managers available"
-                        } />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.isArray(managers) && managers.length > 0 ? (
-                          managers.map((manager: any) => (
-                            <SelectItem key={manager.id} value={manager.id}>
-                              {manager.name}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="none" disabled>
-                            No managers available
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Select
+                        value={formState.managerId.value || "none"}
+                        onValueChange={(value) => setFieldValue('managerId', value === "none" ? "" : value)}
+                      >
+                        <SelectTrigger className={`h-11 ${errors.managerId ? 'border-red-500' : 'border-gray-300'}`}>
+                          <SelectValue placeholder={
+                            Array.isArray(managers) && managers.length > 0 
+                              ? "Select manager (optional)" 
+                              : "No managers available"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Manager</SelectItem>
+                          {Array.isArray(managers) && managers.length > 0 ? (
+                            managers.map((manager: any) => (
+                              <SelectItem key={manager.id} value={manager.id}>
+                                {manager.name}
+                              </SelectItem>
+                            ))
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                      {Array.isArray(managers) && managers.length === 0 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setFieldValue('role', 'manager')
+                            toast({
+                              title: "Info",
+                              description: "Role changed to Manager. You can create a manager first, then create team members.",
+                            })
+                          }}
+                          className="w-full border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]"
+                        >
+                          Create Manager Instead
+                        </Button>
+                      )}
+                    </div>
                     <ValidationError error={errors.managerId} />
                     <ValidationHint hint={
                       Array.isArray(managers) && managers.length > 0
-                        ? "Select a manager for the team member"
-                        : "No managers available in your domain. You can create managers first or assign this team member later."
+                        ? "Select a manager for the team member (optional)"
+                        : "No managers available in your domain. You can create a manager first or create this team member without a manager assignment."
                     } />
                   </div>
                 )}

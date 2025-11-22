@@ -15,10 +15,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Calendar, User, Target, Clock } from "lucide-react"
+import { Calendar, User, Target, Clock, Plus } from "lucide-react"
 import { api } from "@/lib/api"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
+import { CreateTeamMemberDialog } from "./create-team-member-dialog"
 
 interface TaskCreationDialogProps {
   open: boolean
@@ -86,6 +87,7 @@ export function TaskCreationDialog({
   const [assignableUsers, setAssignableUsers] = useState<User[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [services, setServices] = useState<Service[]>([])
+  const [showCreateTeamMember, setShowCreateTeamMember] = useState(false)
 
   useEffect(() => {
     if (open) {
@@ -372,18 +374,32 @@ export function TaskCreationDialog({
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="assignee">Assign To *</Label>
-                    <Select value={taskForm.assigneeId} onValueChange={(value) => setTaskForm({...taskForm, assigneeId: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select team member" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.isArray(assignableUsers) ? assignableUsers.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name} ({user.role})
-                          </SelectItem>
-                        )) : []}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-2">
+                      <Select value={taskForm.assigneeId} onValueChange={(value) => setTaskForm({...taskForm, assigneeId: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select team member" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.isArray(assignableUsers) ? assignableUsers.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.name} ({user.role})
+                            </SelectItem>
+                          )) : []}
+                        </SelectContent>
+                      </Select>
+                      {(user?.role === "admin" || user?.role === "manager") && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowCreateTeamMember(true)}
+                          className="w-full border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]"
+                        >
+                          <Plus className="mr-2 h-4 w-4" />
+                          Create Team Member
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   
                   <div>
@@ -587,13 +603,22 @@ export function TaskCreationDialog({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={loading}>
+              <Button type="submit" disabled={loading} className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
                 {loading ? "Creating..." : "Create Task"}
               </Button>
             </div>
           </form>
         </Tabs>
       </DialogContent>
+      
+      <CreateTeamMemberDialog
+        open={showCreateTeamMember}
+        onOpenChange={setShowCreateTeamMember}
+        onSuccess={() => {
+          fetchAssignableUsers()
+          setShowCreateTeamMember(false)
+        }}
+      />
     </Dialog>
   )
 }

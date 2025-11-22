@@ -130,23 +130,79 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
       } else {
         submitFormData.clientId = ""
       }
+    } else {
+      // For non-client users, make clientId and assigneeId optional
+      if (!submitFormData.clientId) {
+        delete submitFormData.clientId
+      }
+      if (!submitFormData.assigneeId) {
+        delete submitFormData.assigneeId
+      }
     }
     // Ensure dueDate is set
     if (!submitFormData.dueDate) {
       submitFormData.dueDate = new Date().toISOString().slice(0, 10)
     }
     console.log("Submitting task formData:", submitFormData)
+    
+    // Prepare the request body
+    const requestBody = {
+      ...submitFormData,
+      createdBy: user?.id,
+    }
+    
+    // Remove empty strings and "none" values for optional fields
+    if (requestBody.clientId === '' || requestBody.clientId === 'none') {
+      delete requestBody.clientId
+    }
+    if (requestBody.assigneeId === '' || requestBody.assigneeId === 'none') {
+      delete requestBody.assigneeId
+    }
+    if (requestBody.serviceId === '' || requestBody.serviceId === 'none') {
+      delete requestBody.serviceId
+    }
+    
+    console.log("Request body to backend:", requestBody)
 
     try {
       // Create task
       const taskResponse = await fetch(`${HOST_URL}/api/tasks?role=${user?.role}&userId=${user?.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...submitFormData,
-          createdBy: user?.id,
-        }),
+        body: JSON.stringify(requestBody),
       })
+      
+      console.log("Response status:", taskResponse.status)
+      
+      if (!taskResponse.ok) {
+        const errorText = await taskResponse.text()
+        console.error("Error response text:", errorText)
+        let error
+        try {
+          error = JSON.parse(errorText)
+        } catch (e) {
+          error = { error: errorText }
+        }
+        console.error('Task creation error response:', error)
+        
+        let errorMessage = "Failed to create task"
+        if (error.error && typeof error.error === 'string') {
+          errorMessage = error.error
+        } else if (error.details) {
+          const firstErrorKey = Object.keys(error.details)[0]
+          const firstErrorValue = error.details[firstErrorKey]
+          errorMessage = `${firstErrorKey}: ${Array.isArray(firstErrorValue) ? firstErrorValue[0] : firstErrorValue}`
+        } else if (error.message) {
+          errorMessage = error.message
+        }
+        
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        })
+        return
+      }
 
       if (taskResponse.ok) {
         // Also create a calendar event for this task
@@ -186,13 +242,6 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
           isRecurring: false,
           recurrenceType: "",
           recurrenceInterval: 1,
-        })
-      } else {
-        const error = await taskResponse.json()
-        toast({
-          title: "Error",
-          description: error.message || "Failed to create task",
-          variant: "destructive",
         })
       }
     } catch (error) {
@@ -246,16 +295,17 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
             {user?.role !== "client" && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="client" className="text-right">
-                  Client
+                  Client (Optional)
                 </Label>
                 <Select
-                  value={formData.clientId}
-                  onValueChange={(value) => setFormData({ ...formData, clientId: value })}
+                  value={formData.clientId || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, clientId: value === "none" ? "" : value })}
                 >
                   <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select client" />
+                    <SelectValue placeholder="Select client (optional)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">No client</SelectItem>
                     {Array.isArray(clients) ? clients.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>
                         {client.name}
@@ -278,16 +328,17 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
             {(user?.role === "admin" || user?.role === "manager") && (
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="assignee" className="text-right">
-                  Assignee
+                  Assignee (Optional)
                 </Label>
                 <Select
-                  value={formData.assigneeId}
-                  onValueChange={(value) => setFormData({ ...formData, assigneeId: value })}
+                  value={formData.assigneeId || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, assigneeId: value === "none" ? "" : value })}
                 >
                   <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select assignee" />
+                    <SelectValue placeholder="Select assignee (optional)" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none">No assignee</SelectItem>
                     {Array.isArray(teamMembers) ? teamMembers.map((member: any) => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.name}
@@ -384,7 +435,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
               {loading ? "Creating..." : "Create Task"}
             </Button>
           </DialogFooter>

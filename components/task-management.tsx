@@ -93,13 +93,29 @@ export function TaskManagement() {
     try {
       setLoading(true)
       const response = await fetch(`${api.tasks}?role=${user?.role}&userId=${user?.id}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch tasks')
+      }
+      
       const data = await response.json()
       
       // Ensure data is an array before setting
       if (Array.isArray(data)) {
         setTasks(data)
+      } else if (data && typeof data === 'object') {
+        // If it's an object, check if it has an error or tasks property
+        if (data.error) {
+          throw new Error(data.error)
+        } else if (Array.isArray(data.tasks)) {
+          setTasks(data.tasks)
+        } else {
+          console.warn('Expected array but got object:', data)
+          setTasks([])
+        }
       } else {
-        console.error('Expected array but got:', data)
+        console.warn('Expected array but got:', typeof data, data)
         setTasks([])
       }
     } catch (error) {
@@ -107,7 +123,8 @@ export function TaskManagement() {
       setTasks([]) // Set empty array on error
       toast({
         title: "Error",
-        description: "Failed to fetch tasks"
+        description: error instanceof Error ? error.message : "Failed to fetch tasks",
+        variant: "destructive"
       })
     } finally {
       setLoading(false)

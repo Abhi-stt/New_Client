@@ -82,6 +82,9 @@ export default function EmailPage() {
   const [emailToForward, setEmailToForward] = useState<Email | null>(null);
   const [showCreateTaskDialog, setShowCreateTaskDialog] = useState(false);
   const [emailForTask, setEmailForTask] = useState<Email | null>(null);
+  const [filteredEmails, setFilteredEmails] = useState<Email[]>([]);
+  const [showFilteredEmailsModal, setShowFilteredEmailsModal] = useState(false);
+  const [filteredEmailsTitle, setFilteredEmailsTitle] = useState('');
   const [filters, setFilters] = useState({
     sender: '',
     subject: '',
@@ -249,8 +252,30 @@ export default function EmailPage() {
       setEmails(emails.map(email => 
         email._id === emailId ? { ...email, isRead: true } : email
       ));
+      if (selectedEmail && selectedEmail._id === emailId) {
+        setSelectedEmail({ ...selectedEmail, isRead: true });
+      }
     } catch (error) {
       console.error('Error marking email as read:', error);
+    }
+  };
+
+  const markAsUnread = async (emailId: string) => {
+    try {
+      await fetch(`${HOST_URL}/api/email/emails/${emailId}/read`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead: false })
+      });
+      
+      setEmails(emails.map(email => 
+        email._id === emailId ? { ...email, isRead: false } : email
+      ));
+      if (selectedEmail && selectedEmail._id === emailId) {
+        setSelectedEmail({ ...selectedEmail, isRead: false });
+      }
+    } catch (error) {
+      console.error('Error marking email as unread:', error);
     }
   };
 
@@ -442,11 +467,55 @@ export default function EmailPage() {
   };
 
   const handleShowMeetings = () => {
-    router.push('/calendar');
+    // Keywords related to meetings
+    const meetingKeywords = [
+      'meeting', 'schedule', 'appointment', 'call', 'conference',
+      'discuss', 'review', 'sync', 'standup', 'stand-up', 'briefing',
+      'huddle', 'session', 'gathering', 'conference call', 'zoom',
+      'google meet', 'teams meeting', 'webinar', 'workshop', 'seminar'
+    ];
+    
+    const meetingEmails = emails.filter(email => {
+      const searchText = `${email.subject || ''} ${email.bodyPreview || ''} ${email.body || ''} ${email.textBody || ''}`.toLowerCase();
+      return meetingKeywords.some(keyword => searchText.includes(keyword.toLowerCase()));
+    });
+    
+    setFilteredEmails(meetingEmails);
+    setFilteredEmailsTitle('Emails with Meetings');
+    setShowFilteredEmailsModal(true);
+    
+    if (meetingEmails.length === 0) {
+      toast({
+        title: "No Meetings Found",
+        description: "No emails mentioning meetings were found in your inbox.",
+      });
+    }
   };
 
   const handleShowTasks = () => {
-    router.push('/tasks');
+    // Keywords related to tasks
+    const taskKeywords = [
+      'task', 'todo', 'to-do', 'action item', 'action required',
+      'please do', 'need to', 'assign', 'assignment', 'deadline',
+      'due date', 'complete', 'finish', 'deliverable', 'milestone',
+      'follow up', 'follow-up', 'pending', 'outstanding', 'work item'
+    ];
+    
+    const taskEmails = emails.filter(email => {
+      const searchText = `${email.subject || ''} ${email.bodyPreview || ''} ${email.body || ''} ${email.textBody || ''}`.toLowerCase();
+      return taskKeywords.some(keyword => searchText.includes(keyword.toLowerCase()));
+    });
+    
+    setFilteredEmails(taskEmails);
+    setFilteredEmailsTitle('Emails with Tasks');
+    setShowFilteredEmailsModal(true);
+    
+    if (taskEmails.length === 0) {
+      toast({
+        title: "No Tasks Found",
+        description: "No emails mentioning tasks were found in your inbox.",
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -475,13 +544,25 @@ export default function EmailPage() {
           <h1 className="text-2xl sm:text-3xl font-bold">Email Integration</h1>
           <p className="text-sm sm:text-base text-muted-foreground">Manage your Gmail integration and auto-forwarding rules</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {emailAccount.connected && (
-            <Button onClick={syncEmails} disabled={loading} variant="outline" className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]">
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Sync Emails</span>
-              <span className="sm:hidden">Sync</span>
-            </Button>
+            <>
+              <Button onClick={syncEmails} disabled={loading} variant="outline" className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]">
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Sync Emails</span>
+                <span className="sm:hidden">Sync</span>
+              </Button>
+              <Button onClick={handleShowMeetings} variant="outline" className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]">
+                <Calendar className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Show Meetings</span>
+                <span className="sm:hidden">Meetings</span>
+              </Button>
+              <Button onClick={handleShowTasks} variant="outline" className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]">
+                <ClipboardList className="w-4 h-4 mr-2" />
+                <span className="hidden sm:inline">Show Tasks</span>
+                <span className="sm:hidden">Tasks</span>
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -995,39 +1076,25 @@ export default function EmailPage() {
             </div>
             <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t">
               <Button 
-                variant="outline" 
-                onClick={handleShowMeetings}
-                className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]"
-              >
-                <Calendar className="w-4 h-4 mr-2" />
-                Show Meetings
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleShowTasks}
-                className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]"
-              >
-                <ClipboardList className="w-4 h-4 mr-2" />
-                Show Tasks
-              </Button>
-              <Button 
                 onClick={() => handleCreateTaskFromEmail(selectedEmail)}
                 className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25"
               >
                 <ClipboardList className="w-4 h-4 mr-2" />
                 Create Task from Mail
               </Button>
-              <Button variant="outline" onClick={() => setShowEmailModal(false)} className="w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setShowEmailModal(false)} className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]">
                 Close
               </Button>
               <Button 
                 onClick={() => {
-                  if (!selectedEmail.isRead) {
+                  if (selectedEmail.isRead) {
+                    markAsUnread(selectedEmail._id);
+                  } else {
                     markAsRead(selectedEmail._id);
                   }
                   setShowEmailModal(false);
                 }}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25"
               >
                 {selectedEmail.isRead ? 'Mark as Unread' : 'Mark as Read'}
               </Button>
@@ -1118,6 +1185,114 @@ export default function EmailPage() {
           }}
         />
       )}
+
+      {/* Filtered Emails Modal (Meetings/Tasks) */}
+      <Dialog open={showFilteredEmailsModal} onOpenChange={setShowFilteredEmailsModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden mx-4 sm:mx-0">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              {filteredEmailsTitle}
+            </DialogTitle>
+            <DialogDescription>
+              {filteredEmails.length > 0 
+                ? `Found ${filteredEmails.length} email${filteredEmails.length > 1 ? 's' : ''} mentioning ${filteredEmailsTitle.includes('Meetings') ? 'meetings' : 'tasks'}`
+                : 'No emails found'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[60vh] mt-4">
+            {filteredEmails.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="mb-4">
+                  <Mail className="w-16 h-16 mx-auto text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {filteredEmailsTitle.includes('Meetings') ? 'No Meetings Found' : 'No Tasks Found'}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {filteredEmailsTitle.includes('Meetings') 
+                    ? 'No emails mentioning meetings were found in your inbox.'
+                    : 'No emails mentioning tasks were found in your inbox.'
+                  }
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredEmails.map((email) => (
+                  <div
+                    key={email._id}
+                    className={`p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md hover:border-[#6366F1]/30 ${
+                      !email.isRead 
+                        ? 'bg-gradient-to-br from-[#6366F1]/10 to-[#A855F7]/10 border-[#6366F1]/20 shadow-sm' 
+                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                    }`}
+                    onClick={() => {
+                      setSelectedEmail(email);
+                      setShowEmailModal(true);
+                      setShowFilteredEmailsModal(false);
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-1">
+                        {!email.isRead ? (
+                          <div className="w-3 h-3 bg-gradient-to-r from-[#6366F1] to-[#A855F7] rounded-full" />
+                        ) : (
+                          <div className="w-3 h-3 bg-gray-300 rounded-full" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-sm text-gray-900 truncate">
+                            {email.sender}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-2">{formatDate(email.receivedAt)}</span>
+                        </div>
+                        <h3 className={`font-medium text-sm mb-1 truncate ${
+                          !email.isRead ? 'text-gray-900' : 'text-gray-700'
+                        }`}>
+                          {email.subject || '(No Subject)'}
+                        </h3>
+                        <p className="text-xs text-gray-600 line-clamp-2">
+                          {email.bodyPreview || 'No preview available'}
+                        </p>
+                        {email.hasAttachments && (
+                          <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
+                            <Paperclip className="w-3 h-3" />
+                            <span>{email.attachmentCount} attachment{email.attachmentCount > 1 ? 's' : ''}</span>
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCreateTaskFromEmail(email);
+                          setShowFilteredEmailsModal(false);
+                        }}
+                        className="h-8 w-8 p-0"
+                        title="Create Task from Email"
+                      >
+                        <ClipboardList className="w-4 h-4 text-gray-400 hover:text-[#6366F1]" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowFilteredEmailsModal(false)}
+              className="border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       </div>
     </DashboardLayout>
   );

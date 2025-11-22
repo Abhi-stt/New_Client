@@ -166,7 +166,7 @@ export function CreateQueryDialog({ open, onOpenChange, onSuccess }: CreateQuery
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
               {loading ? "Creating..." : "Create Query"}
             </Button>
           </DialogFooter>

@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const User = require('../schemas/User');
 const UserActivity = require('../schemas/UserActivity');
 const { validateUser, sanitizeInput, requireAdmin } = require('../middleware/validation');
@@ -170,6 +171,9 @@ router.get('/', async (req, res) => {
 // Create a new user (team member)
 router.post('/', sanitizeInput, validateUser, async (req, res) => {
   try {
+    console.log('Create user request body:', req.body)
+    console.log('Create user query params:', req.query)
+    
     const { name, email, password, role, phone, managerId, status } = req.body;
     
     // Get current user for ownership (from middleware or query params)
@@ -190,16 +194,34 @@ router.post('/', sanitizeInput, validateUser, async (req, res) => {
     // Set ownership fields
     const ownershipFields = setOwnershipFields(currentUser.role, currentUser.id, userAdminId);
 
-    const user = new User({
+    // Build user data object - only include optional fields if they have values
+    const userData = {
       name,
       email,
       password,
       role,
-      phone: phone || '',
-      managerId: managerId || null,
       status: status || 'active',
       ...ownershipFields
-    });
+    };
+    
+    // Only include phone if provided and not empty
+    if (phone && phone.trim() !== '') {
+      userData.phone = phone.trim()
+    }
+    
+    // Only include managerId if provided and valid
+    if (managerId && managerId.trim() !== '' && managerId !== 'none') {
+      // Validate that managerId is a valid ObjectId
+      if (mongoose.Types.ObjectId.isValid(managerId)) {
+        userData.managerId = managerId
+      } else {
+        return res.status(400).json({ error: 'Invalid manager ID format' })
+      }
+    }
+
+    console.log('Creating user with data:', { ...userData, password: '***' })
+
+    const user = new User(userData);
     
     await user.save();
     
@@ -223,7 +245,24 @@ router.post('/', sanitizeInput, validateUser, async (req, res) => {
     });
   } catch (err) {
     console.error('Create user error:', err);
-    res.status(400).json({ error: err.message || 'Failed to create user' });
+    
+    // Return detailed error for validation failures
+    if (err.name === 'ValidationError') {
+      const validationErrors = {};
+      Object.keys(err.errors).forEach(key => {
+        validationErrors[key] = err.errors[key].message;
+      });
+      return res.status(400).json({ 
+        error: 'Validation failed',
+        details: validationErrors,
+        message: err.message
+      });
+    }
+    
+    res.status(400).json({ 
+      error: err.message || 'Failed to create user',
+      details: err.errors || {}
+    });
   }
 });
 
