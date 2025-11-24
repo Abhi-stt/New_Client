@@ -1,5 +1,35 @@
-export const HOST_URL = process.env.NEXT_PUBLIC_HOST_URL || 'http://localhost:5000';
-export const API_BASE_URL = `${HOST_URL}/api`;
+const stripTrailingSlash = (value?: string | null) => value?.replace(/\/$/, "") ?? ""
+
+const resolveHostUrl = (): string => {
+  const configuredHost = stripTrailingSlash(process.env.NEXT_PUBLIC_HOST_URL ?? undefined)
+  if (configuredHost) {
+    return configuredHost
+  }
+
+  if (typeof window !== "undefined") {
+    const { origin, hostname, port } = window.location
+    const isLocalDevHost =
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "[::1]" ||
+      port === "3000"
+
+    if (isLocalDevHost) {
+      return "http://localhost:5000"
+    }
+
+    return origin
+  }
+
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:5000"
+  }
+
+  return ""
+}
+
+export const HOST_URL = resolveHostUrl()
+export const API_BASE_URL = HOST_URL ? `${HOST_URL}/api` : "/api"
 export const api = {
   // Auth endpoints
   login: `${API_BASE_URL}/users/login`,

@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api"
 import { useFormValidation, validationRules } from "@/hooks/useFormValidation"
 import { ValidationError, ValidationHint } from "@/components/ui/validation-error"
+import { FullPageLoader } from "@/components/ui/full-page-loader"
 
 interface User {
   _id: string
@@ -69,7 +70,7 @@ interface DemoRequest {
 }
 
 export function SuperAdminDashboard() {
-  const { user } = useAuth()
+  const { user: authUser } = useAuth()
   const { toast } = useToast()
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
@@ -115,26 +116,28 @@ export function SuperAdminDashboard() {
   )
 
   useEffect(() => {
+    if (!authUser?.id) return
     fetchDashboardData()
-  }, [user])
+  }, [authUser?.id])
 
   const fetchDashboardData = async () => {
+    if (!authUser?.id) return
     try {
       setLoading(true)
       
       // Fetch dashboard stats
-      const statsResponse = await fetch(`${api.superAdminDashboardStats}?userId=${user?.id}`)
+      const statsResponse = await fetch(`${api.superAdminDashboardStats}?userId=${authUser.id}`)
       const statsData = await statsResponse.json()
       setStats(statsData.stats)
       setActivities(statsData.recentActivities || [])
 
       // Fetch all users
-      const usersResponse = await fetch(`${api.superAdminUsers}?userId=${user?.id}`)
+      const usersResponse = await fetch(`${api.superAdminUsers}?userId=${authUser.id}`)
       const usersData = await usersResponse.json()
       setUsers(usersData)
 
       // Fetch demo requests
-      const demoResponse = await fetch(`${api.superAdminDemoRequests}?userId=${user?.id}`)
+      const demoResponse = await fetch(`${api.superAdminDemoRequests}?userId=${authUser.id}`)
       const demoData = await demoResponse.json()
       setDemoRequests(demoData.requests || [])
     } catch (error) {
@@ -164,6 +167,15 @@ export function SuperAdminDashboard() {
       return
     }
 
+    if (!authUser?.id) {
+      toast({
+        title: "Session expired",
+        description: "Please sign in again to continue.",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
       // Prepare user data from form state
       const userData = {
@@ -174,7 +186,7 @@ export function SuperAdminDashboard() {
         phone: formState.phone.value
       }
 
-      const response = await fetch(`${api.superAdminCreateUser}?userId=${user?.id}`, {
+      const response = await fetch(`${api.superAdminCreateUser}?userId=${authUser.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData)
@@ -225,9 +237,18 @@ export function SuperAdminDashboard() {
     
     if (!confirm(`Are you sure you want to permanently delete ${userName}?\n\nThis action cannot be undone.`)) return
 
+    if (!authUser?.id) {
+      toast({
+        title: "Session expired",
+        description: "Please sign in again before performing user actions.",
+        variant: "destructive"
+      })
+      return
+    }
+
     setDeletingUserId(userId)
     try {
-      const response = await fetch(`${api.superAdminDeleteUser(userId)}?userId=${user?.id}`, {
+      const response = await fetch(`${api.superAdminDeleteUser(userId)}?userId=${authUser.id}`, {
         method: "DELETE",
         headers: {
           'Content-Type': 'application/json'
@@ -322,11 +343,20 @@ export function SuperAdminDashboard() {
   }
 
   const handleUpdateDemoStatus = async (requestId: string, status: string) => {
+    if (!authUser?.id) {
+      toast({
+        title: "Session expired",
+        description: "Please sign in again before updating demo requests.",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
       // Ensure we stay on demo-requests tab
       setActiveTab("demo-requests")
       
-      const response = await fetch(`${api.superAdminUpdateDemoRequest(requestId)}?userId=${user?.id}`, {
+      const response = await fetch(`${api.superAdminUpdateDemoRequest(requestId)}?userId=${authUser.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status })
@@ -338,7 +368,7 @@ export function SuperAdminDashboard() {
           description: "Demo request status updated"
         })
         // Fetch only demo requests to avoid tab switch
-        const demoResponse = await fetch(`${api.superAdminDemoRequests}?userId=${user?.id}`)
+        const demoResponse = await fetch(`${api.superAdminDemoRequests}?userId=${authUser.id}`)
         const demoData = await demoResponse.json()
         setDemoRequests(demoData.requests || [])
       } else {
@@ -363,7 +393,7 @@ export function SuperAdminDashboard() {
   })
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+    return <FullPageLoader label="Preparing super admin insights..." className="min-h-screen" />
   }
 
   return (
@@ -516,26 +546,26 @@ export function SuperAdminDashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers.map((user) => (
-                      <TableRow key={user._id}>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
+                    {filteredUsers.map((systemUser) => (
+                      <TableRow key={systemUser._id}>
+                        <TableCell className="font-medium">{systemUser.name}</TableCell>
+                        <TableCell>{systemUser.email}</TableCell>
                         <TableCell>
-                          <Badge className={getRoleBadgeColor(user.role)}>
-                            {getRoleDisplayName(user.role)}
+                          <Badge className={getRoleBadgeColor(systemUser.role)}>
+                            {getRoleDisplayName(systemUser.role)}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={user.isActive ? "default" : "secondary"}>
-                            {user.isActive ? "Active" : "Inactive"}
+                          <Badge variant={systemUser.isActive ? "default" : "secondary"}>
+                            {systemUser.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {new Date(user.createdAt).toLocaleDateString()}
+                          {new Date(systemUser.createdAt).toLocaleDateString()}
                         </TableCell>
                         <TableCell>
-                          {user.lastLoginAt 
-                            ? new Date(user.lastLoginAt).toLocaleDateString()
+                          {systemUser.lastLoginAt 
+                            ? new Date(systemUser.lastLoginAt).toLocaleDateString()
                             : "Never"
                           }
                         </TableCell>
@@ -545,7 +575,7 @@ export function SuperAdminDashboard() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                setSelectedUser(user)
+                                setSelectedUser(systemUser)
                                 setShowUserDetails(true)
                               }}
                               className="w-full sm:w-auto"
@@ -568,15 +598,15 @@ export function SuperAdminDashboard() {
                               <Edit className="h-4 w-4" />
                               <span className="ml-1 sm:hidden">Edit</span>
                             </Button>
-                            {user._id !== user?.id && (
+                            {systemUser._id !== authUser?.id && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleDeleteUser(user._id)}
-                                disabled={deletingUserId === user._id}
+                                onClick={() => handleDeleteUser(systemUser._id)}
+                                disabled={deletingUserId === systemUser._id}
                                 className="text-red-600 hover:text-red-700 disabled:opacity-50 w-full sm:w-auto"
                               >
-                                {deletingUserId === user._id ? (
+                                {deletingUserId === systemUser._id ? (
                                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
                                 ) : (
                                   <Trash2 className="h-4 w-4" />

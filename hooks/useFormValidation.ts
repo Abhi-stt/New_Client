@@ -9,7 +9,7 @@ import {
   validateDate, 
   validateNumber, 
   validateRole,
-  validateField,
+  validateField as runValidation,
   ValidationRule,
   ValidationResult 
 } from '@/lib/validations';
@@ -86,7 +86,7 @@ export const useFormValidation = (
   }, []);
 
   // Validate a single field
-  const validateField = useCallback((field: string): ValidationResult => {
+  const validateFormField = useCallback((field: string): ValidationResult => {
     const fieldState = formState[field];
     const rule = validationRules[field];
     
@@ -94,7 +94,7 @@ export const useFormValidation = (
       return { isValid: true };
     }
 
-    const result = validateField(fieldState.value, rule);
+    const result = runValidation(fieldState.value, rule);
     
     // Update form state with validation result
     setFormState(prev => ({
@@ -117,7 +117,7 @@ export const useFormValidation = (
       const rule = validationRules[field];
       const fieldState = formState[field];
       
-      const result = validateField(fieldState.value, rule);
+      const result = runValidation(fieldState.value, rule);
       
       if (!result.isValid) {
         isFormValid = false;
@@ -162,10 +162,10 @@ export const useFormValidation = (
       onChange: (value: any) => setFieldValue(field, value),
       onBlur: () => {
         setFieldTouched(field, true);
-        validateField(field);
+        validateFormField(field);
       }
     };
-  }, [formState, setFieldValue, setFieldTouched, validateField]);
+  }, [formState, setFieldValue, setFieldTouched, validateFormField]);
 
   // Calculate form errors and validity
   const errors: Record<string, string> = {};
@@ -185,7 +185,7 @@ export const useFormValidation = (
     isValid,
     setFieldValue,
     setFieldTouched,
-    validateField,
+    validateField: validateFormField,
     validateForm,
     resetForm,
     getFieldProps

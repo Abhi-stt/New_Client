@@ -9,6 +9,7 @@ import { AdminDashboard } from "@/components/dashboards/admin-dashboard"
 import { ManagerDashboard } from "@/components/dashboards/manager-dashboard"
 import { TeamMemberDashboard } from "@/components/dashboards/team-member-dashboard"
 import { ClientDashboard } from "@/components/dashboards/client-dashboard"
+import { FullPageLoader } from "@/components/ui/full-page-loader"
 
 export default function DashboardPage() {
   const { user, loading } = useAuth()
@@ -21,7 +22,7 @@ export default function DashboardPage() {
   }, [user, loading, router])
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+    return <FullPageLoader label="Loading your dashboard..." className="min-h-screen" />
   }
 
   if (!user) {
