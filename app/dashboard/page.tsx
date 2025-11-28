@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/components/auth-provider"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useEffect } from "react"
+import { Suspense, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { SuperAdminDashboard } from "@/components/dashboards/super-admin-dashboard"
 import { AdminDashboard } from "@/components/dashboards/admin-dashboard"
@@ -11,7 +11,7 @@ import { TeamMemberDashboard } from "@/components/dashboards/team-member-dashboa
 import { ClientDashboard } from "@/components/dashboards/client-dashboard"
 import { FullPageLoader } from "@/components/ui/full-page-loader"
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -49,4 +49,12 @@ export default function DashboardPage() {
   }
 
   return <DashboardLayout>{renderDashboard()}</DashboardLayout>
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<FullPageLoader label="Loading your dashboard..." className="min-h-screen" />}>
+      <DashboardContent />
+    </Suspense>
+  )
 }
