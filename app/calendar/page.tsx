@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,24 +9,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CustomCalendar } from "@/components/custom-calendar"
 import { CreateTaskDialog } from "@/components/dialogs/create-task-dialog"
 import { Plus, Filter } from "lucide-react"
-import { HOST_URL } from "@/lib/api"
+import { api, HOST_URL } from "@/lib/api"
+
+const EVENT_TYPE_OPTIONS = [
+  { value: "all", label: "All", color: "bg-slate-200 text-slate-700", activeColor: "bg-slate-700 text-white" },
+  { value: "tasks", label: "Task", color: "bg-cyan-100 text-cyan-700", activeColor: "bg-cyan-500 text-white" },
+  { value: "case", label: "Case", color: "bg-amber-100 text-amber-700", activeColor: "bg-amber-500 text-white" },
+  { value: "hearing", label: "Hearing", color: "bg-rose-100 text-rose-700", activeColor: "bg-rose-500 text-white" },
+  { value: "appointment", label: "Appointment / Meeting", color: "bg-emerald-100 text-emerald-700", activeColor: "bg-emerald-500 text-white" },
+]
 
 export default function CalendarPage() {
   const { user } = useAuth()
-  const [events, setEvents] = useState([])
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [selectedClient, setSelectedClient] = useState("all")
   const [selectedPriority, setSelectedPriority] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
-  const [view, setView] = useState("month")
+  const [calendarView, setCalendarView] = useState("month")
+  const [eventFilter, setEventFilter] = useState("all")
   const [tasks, setTasks] = useState([])
   const [filteredTasks, setFilteredTasks] = useState([])
+  const [casesData, setCasesData] = useState<any[]>([])
+  const [hearingsData, setHearingsData] = useState<any[]>([])
 
   useEffect(() => {
     fetchTasks()
     fetchClients()
+    fetchCasesData()
+    fetchHearingsData()
   }, [user])
 
   const fetchTasks = async () => {
@@ -34,21 +46,46 @@ export default function CalendarPage() {
       const response = await fetch(`${HOST_URL}/api/tasks?role=${user?.role}&userId=${user?.id}`)
       const data = await response.json()
       
-      // Ensure data is an array before setting
+      let parsedTasks: any[] = []
       if (Array.isArray(data)) {
-        setTasks(data)
-        setFilteredTasks(data) // Initialize filtered tasks
-      } else {
-        console.error('Expected array but got:', data)
-        setTasks([])
-        setFilteredTasks([])
+        parsedTasks = data
+      } else if (Array.isArray(data?.tasks)) {
+        parsedTasks = data.tasks
       }
+      setTasks(parsedTasks)
+      setFilteredTasks(parsedTasks)
     } catch (error) {
       console.error("Error fetching tasks:", error)
       setTasks([]) // Set empty array on error
       setFilteredTasks([])
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCasesData = async () => {
+    if (!user?.id) return
+    try {
+      const response = await fetch(`${api.cases}?role=${encodeURIComponent(user.role)}&userId=${user.id}`)
+      const data = await response.json()
+      setCasesData(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error("Error fetching cases:", error)
+      setCasesData([])
+    }
+  }
+
+  const fetchHearingsData = async () => {
+    if (!user?.id) return
+    try {
+      const response = await fetch(
+        `${api.hearings}?role=${encodeURIComponent(user.role)}&userId=${user.id}&range=all`,
+      )
+      const data = await response.json()
+      setHearingsData(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error("Error fetching hearings:", error)
+      setHearingsData([])
     }
   }
 
@@ -130,15 +167,15 @@ export default function CalendarPage() {
 
   const canCreateEvents = user?.role === "admin" || user?.role === "manager" || user?.role === "client"
 
-  // Generate calendar events from filtered tasks (including recurring instances)
-  const generateCalendarEvents = () => {
+  const taskEvents = useMemo(() => {
     const events = []
-    
     filteredTasks.forEach((task: any) => {
+      if (!task.dueDate) {
+        return
+      }
       if (task.isRecurring) {
-        // Generate recurring instances
         const instances = generateRecurringInstances(task)
-        instances.forEach(instance => {
+        instances.forEach((instance) => {
           events.push({
             id: instance.id,
             title: instance.title,
@@ -146,13 +183,10 @@ export default function CalendarPage() {
             priority: instance.priority,
             clientName: instance.clientName,
             description: instance.description,
-            status: instance.status,
-            isRecurring: true,
-            originalTaskId: instance.originalTaskId
+            category: "tasks",
           })
         })
       } else {
-        // Single occurrence task
         events.push({
           id: task.id,
           title: task.title,
@@ -160,16 +194,99 @@ export default function CalendarPage() {
           priority: task.priority,
           clientName: task.clientName,
           description: task.description,
-          status: task.status,
-          isRecurring: false
+          category: "tasks",
         })
       }
     })
-    
     return events
-  }
+  }, [filteredTasks])
 
-  const calendarTasks = generateCalendarEvents()
+  const caseEvents = useMemo(() => {
+    if (!Array.isArray(casesData)) return []
+    const now = new Date()
+    return casesData.flatMap((caseItem: any) => {
+      const entries: any[] = []
+      const caseId = caseItem.id || caseItem._id
+      if (caseItem?.dueDate) {
+        const dueDate = new Date(caseItem.dueDate)
+        if (!Number.isNaN(dueDate.getTime())) {
+          const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+          entries.push({
+            id: `case-due-${caseId}`,
+            title: `Case Due: ${caseItem.caseTitle}`,
+            date: caseItem.dueDate,
+            priority: diffDays <= 3 ? "high" : "medium",
+            clientName: caseItem.clientSnapshot?.name,
+            description: `Authority: ${caseItem.authorityName || "—"}`,
+            category: "case",
+            badge: "Case Due",
+            meta: {
+              caseId,
+              status: caseItem.status,
+              dueDate: caseItem.dueDate,
+            },
+          })
+        }
+      }
+      if (caseItem?.nextHearingDate) {
+        entries.push({
+          id: `case-next-hearing-${caseId}`,
+          title: `Next Hearing: ${caseItem.caseTitle}`,
+          date: caseItem.nextHearingDate,
+          priority: "medium",
+          clientName: caseItem.clientSnapshot?.name,
+          description: caseItem.officerName
+            ? `Officer: ${caseItem.officerName}`
+            : caseItem.authorityName
+              ? `Authority: ${caseItem.authorityName}`
+              : undefined,
+          category: "case",
+          badge: "Next Hearing",
+          meta: {
+            caseId,
+            officer: caseItem.officerName,
+          },
+        })
+      }
+      return entries
+    })
+  }, [casesData])
+
+  const hearingEvents = useMemo(() => {
+    if (!Array.isArray(hearingsData)) return []
+    return hearingsData.map((hearing: any) => ({
+      id: `hearing-${hearing.id || hearing._id}`,
+      title: `Hearing: ${hearing.caseTitle}`,
+      date: hearing.hearingDate,
+      priority: "low",
+      clientName: hearing.clientSnapshot?.name,
+      description: hearing.purpose || (hearing.outcome ? `Outcome: ${hearing.outcome.replace(/_/g, " ")}` : undefined),
+      category: "hearing",
+      badge: hearing.outcome ? hearing.outcome.replace(/_/g, " ") : "Hearing",
+      meta: {
+        hearingId: hearing.id || hearing._id,
+        officer: hearing.officerName || hearing.benchName,
+        nextHearingDate: hearing.nextHearingDate,
+        caseId: hearing.caseId,
+      },
+    }))
+  }, [hearingsData])
+
+  const normalizedFilter = eventFilter === "appointment" ? "tasks" : eventFilter
+
+  const calendarEvents = useMemo(() => {
+    const combined = []
+    if (normalizedFilter === "all" || normalizedFilter === "tasks") {
+      combined.push(...taskEvents)
+    }
+    if (normalizedFilter === "all" || normalizedFilter === "case") {
+      combined.push(...caseEvents)
+    }
+    if (normalizedFilter === "all" || normalizedFilter === "hearing") {
+      combined.push(...hearingEvents)
+    }
+    return combined
+  }, [normalizedFilter, taskEvents, caseEvents, hearingEvents])
 
   if (loading) {
     return (
@@ -254,23 +371,14 @@ export default function CalendarPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={view} onValueChange={setView}>
-                <SelectTrigger className="w-32">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="month">Month</SelectItem>
-                  <SelectItem value="week">Week</SelectItem>
-                  <SelectItem value="day">Day</SelectItem>
-                </SelectContent>
-              </Select>
-
               <Button
                 variant="outline"
                 onClick={() => {
                   setSelectedClient("all")
                   setSelectedPriority("all")
                   setSelectedStatus("all")
+                  setEventFilter("all")
+                  setCalendarView("month")
                 }}
               >
                 Clear Filters
@@ -281,8 +389,46 @@ export default function CalendarPage() {
 
         {/* Calendar Component */}
         <Card className="w-full">
-          <CardContent className="p-0">
-            <CustomCalendar events={calendarTasks} />
+          <CardContent className="p-4 space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              <div className="flex flex-wrap gap-2">
+                {EVENT_TYPE_OPTIONS.map((option) => {
+                  const isActive = eventFilter === option.value
+                  const baseClass = isActive ? option.activeColor : option.color
+                  const stateClass = isActive ? "shadow" : "opacity-80 hover:opacity-100"
+                  return (
+                    <button
+                      key={option.value}
+                      className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold transition ${baseClass} ${stateClass}`}
+                      onClick={() => setEventFilter(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full px-2 py-1">
+                {["month", "week", "day"].map((mode) => {
+                  const isActive = calendarView === mode
+                  return (
+                    <button
+                      key={mode}
+                      onClick={() => setCalendarView(mode)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                        isActive
+                          ? "bg-gradient-to-r from-[#6366F1] to-[#A855F7] text-white shadow"
+                          : "text-slate-600"
+                      }`}
+                    >
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+              <CustomCalendar events={calendarEvents} view={calendarView} />
+            </div>
           </CardContent>
         </Card>
 

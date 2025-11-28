@@ -8,6 +8,7 @@ const Firm = require('../schemas/Firm');
 const UserActivity = require('../schemas/UserActivity');
 const mongoose = require('mongoose');
 const { getUserAdminId, buildAccessFilter, getAdminDomainStats } = require('../utils/accessControl');
+const { getFinancialYearRange } = require('../utils/financialYear');
 const router = express.Router();
 
 // Helper function to safely convert string to ObjectId
@@ -26,40 +27,126 @@ const safeObjectId = (id) => {
 };
 
 // Admin dashboard
+const clampRange = (baseRange, fyRange) => {
+  if (!fyRange) return baseRange;
+  const start = baseRange.$gte ? new Date(Math.max(baseRange.$gte.getTime(), fyRange.startDate.getTime())) : fyRange.startDate;
+  const end = baseRange.$lte ? new Date(Math.min(baseRange.$lte.getTime(), fyRange.endDate.getTime())) : fyRange.endDate;
+  if (start > end) {
+    return null;
+  }
+  return { $gte: start, $lte: end };
+};
+
+const withDateRange = (filter, fyRange, field = 'createdAt') => {
+  if (!fyRange) return { ...filter };
+  return {
+    ...filter,
+    [field]: {
+      ...(filter[field] || {}),
+      $gte: fyRange.startDate,
+      $lte: fyRange.endDate,
+    },
+  };
+};
+
 router.get('/admin', async (req, res) => {
   try {
-    const { userId } = req.query;
+    const { userId, fy } = req.query;
     
     // Get current user for access control
     const currentUser = req.user || { role: 'admin', id: userId || null };
     if (!currentUser.id) {
       return res.status(401).json({ error: 'Authentication required' });
     }
-    
+
+    const fyRange = getFinancialYearRange(fy);
     const userAdminId = await getUserAdminId(currentUser.id);
     
     // Build access filter for admin domain isolation
     const accessFilter = buildAccessFilter(currentUser.role, currentUser.id, userAdminId);
-    
+    const userDateFilter = withDateRange(accessFilter, fyRange);
+
     // Fetch real data from database within admin domain
-    const totalUsers = await User.countDocuments(accessFilter);
-    const totalClients = await Client.countDocuments(accessFilter);
-    const totalDocuments = await Document.countDocuments(accessFilter);
+    const totalUsers = await User.countDocuments(userDateFilter);
+    const totalClients = await Client.countDocuments(userDateFilter);
+    const totalDocuments = await Document.countDocuments(userDateFilter);
+
+    const taskDateFilter = withDateRange(accessFilter, fyRange, 'createdAt');
+
     const pendingTasks = await Task.countDocuments({ 
-      ...accessFilter,
+      ...taskDateFilter,
       status: { $in: ['pending', 'in_progress'] } 
     });
     const overdueTasks = await Task.countDocuments({ 
-      ...accessFilter,
+      ...taskDateFilter,
       status: { $in: ['pending', 'in_progress'] },
       dueDate: { $lt: new Date() }
     });
     const completedTasks = await Task.countDocuments({ 
-      ...accessFilter,
+      ...taskDateFilter,
       status: 'completed' 
     });
     const totalTasks = completedTasks + pendingTasks;
     const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    // Recent activities within admin domain for FY
+    const domainUsers = await User.find({
+      $or: [
+        { _id: userAdminId },
+        { adminId: userAdminId },
+      ],
+    }).select('_id');
+    const domainUserIds = domainUsers.map(u => u._id);
+
+    const activityFilter = {
+      userId: { $in: domainUserIds },
+    };
+    if (fyRange) {
+      activityFilter.timestamp = {
+        $gte: fyRange.startDate,
+        $lte: fyRange.endDate,
+      };
+    }
+
+    const recentActivities = await UserActivity.find(activityFilter)
+      .sort({ timestamp: -1 })
+      .limit(5)
+      .populate('userId', 'name role')
+      .lean();
+
+    const now = new Date();
+    const upcomingWindow = new Date();
+    upcomingWindow.setDate(upcomingWindow.getDate() + 14);
+    let dueDateRange = { $gte: now, $lte: upcomingWindow };
+    if (fyRange) {
+      const clamped = clampRange(dueDateRange, fyRange);
+      if (clamped) {
+        dueDateRange = clamped;
+      } else {
+        dueDateRange = null;
+      }
+    }
+
+    let upcomingDeadlines = [];
+    if (dueDateRange) {
+      const upcomingDocs = await Task.find({
+        ...taskDateFilter,
+        status: { $in: ['pending', 'in_progress'] },
+        dueDate: dueDateRange,
+      })
+        .sort({ dueDate: 1 })
+        .limit(5)
+        .select('title dueDate priority clientId')
+        .populate('clientId', 'name')
+        .lean();
+
+      upcomingDeadlines = upcomingDocs.map(task => ({
+        title: task.title,
+        dueDate: task.dueDate,
+        priority: task.priority,
+        clientName: task.clientId?.name || 'Unassigned',
+      }));
+    }
 
     const dashboardData = {
       stats: {
@@ -70,16 +157,14 @@ router.get('/admin', async (req, res) => {
         overdueItems: overdueTasks,
         completionRate,
       },
-      recentActivity: [
-        { type: 'task_created', message: 'New GST filing task created', time: '2 hours ago' },
-        { type: 'document_uploaded', message: 'Bank statement uploaded for ABC Corp', time: '4 hours ago' },
-        { type: 'query_resolved', message: 'Tax query resolved for XYZ Ltd', time: '6 hours ago' }
-      ],
-      upcomingDeadlines: [
-        { title: 'GST Return - ABC Corp', dueDate: '2024-01-20', priority: 'high' },
-        { title: 'TDS Payment - XYZ Ltd', dueDate: '2024-01-25', priority: 'medium' },
-        { title: 'Audit Report - DEF Industries', dueDate: '2024-01-30', priority: 'low' }
-      ]
+      recentActivity: recentActivities.map(activity => ({
+        type: activity.action,
+        message: activity.description,
+        time: activity.timestamp,
+        actor: activity.userId?.name || 'User',
+        role: activity.userId?.role || 'member',
+      })),
+      upcomingDeadlines,
     };
     res.json(dashboardData);
   } catch (err) {

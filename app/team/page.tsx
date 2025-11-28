@@ -18,7 +18,7 @@ import { useToast } from "@/hooks/use-toast"
 import { HOST_URL } from "@/lib/api"
 
 export default function TeamPage() {
-  const { user } = useAuth()
+  const { user, baseUser, viewAsRole, viewAsUser } = useAuth()
   const { toast } = useToast()
   const [teamMembers, setTeamMembers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -33,20 +33,38 @@ export default function TeamPage() {
   const [selectedRole, setSelectedRole] = useState("all")
   const [selectedStatus, setSelectedStatus] = useState("all")
 
+  const isSuperAdminShell = baseUser?.role === "super_admin" && !viewAsUser
+  const impersonationRoleLabel = viewAsRole ? viewAsRole.replace("_", " ") : "selected role"
+  const canResolveIdentity = !isSuperAdminShell || !!viewAsUser
+
   useEffect(() => {
+    if (!user?.id || !user.role) {
+      return
+    }
+
+    if (!canResolveIdentity) {
+      setTeamMembers([])
+      setLoading(false)
+      return
+    }
+
     fetchTeamMembers()
-    
+
     // Handle URL parameters for client filtering
     const urlParams = new URLSearchParams(window.location.search)
-    const clientId = urlParams.get('clientId')
+    const clientId = urlParams.get("clientId")
     if (clientId) {
       // Set page title to indicate client-specific view
       document.title = `Team - Client View`
-      console.log('Client filter requested:', clientId)
+      console.log("Client filter requested:", clientId)
     }
-  }, [user])
+  }, [user?.id, user?.role, canResolveIdentity])
 
   const fetchTeamMembers = async () => {
+    if (!user?.id || !user.role || !canResolveIdentity) {
+      return
+    }
+
     try {
       let response
       const urlParams = new URLSearchParams(window.location.search)
@@ -64,14 +82,26 @@ export default function TeamPage() {
         response = await fetch(`${HOST_URL}/api/users/team-members?role=${user?.role}&userId=${user?.id}`)
       }
       const data = await response.json()
-      
-      // Ensure data is an array before setting
-      if (Array.isArray(data)) {
-        setTeamMembers(data)
-      } else {
-        console.error('Expected array but got:', data)
-        setTeamMembers([])
+      const normalized =
+        (Array.isArray(data) && data) ||
+        (Array.isArray(data?.teamMembers) && data.teamMembers) ||
+        (Array.isArray(data?.data) && data.data) ||
+        (Array.isArray(data?.items) && data.items) ||
+        []
+
+      if (!Array.isArray(normalized) || normalized.length === 0) {
+        if (data?.error) {
+          toast({
+            title: "Unable to load team members",
+            description: data.error,
+            variant: "destructive",
+          })
+        } else {
+          console.warn("Team members API returned unexpected shape", data)
+        }
       }
+
+      setTeamMembers(normalized)
     } catch (error) {
       console.error("Error fetching team members:", error)
       setTeamMembers([]) // Set empty array on error
@@ -88,8 +118,9 @@ export default function TeamPage() {
     )
   })
 
-  const canManageTeam = user?.role === "admin" || user?.role === "manager" || user?.role === "client"
-  const canManage2FA = user?.role === "admin" || user?.role === "manager"
+  const canManageTeam =
+    canResolveIdentity && (user?.role === "admin" || user?.role === "manager" || user?.role === "client")
+  const canManage2FA = canResolveIdentity && (user?.role === "admin" || user?.role === "manager")
 
   const handleToggle2FA = (member: any) => {
     setSelectedMember(member)
@@ -175,6 +206,12 @@ export default function TeamPage() {
 
         {/* Scrollable Content Area */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4">
+          {isSuperAdminShell && !viewAsUser && (
+            <div className="mb-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              You are browsing the generic {impersonationRoleLabel} workspace. Pick a specific user from the
+              <span className="font-semibold"> Super Admin → Role Access</span> tab to load their actual team roster and permissions.
+            </div>
+          )}
           <div className="space-y-6">
             {/* Filters */}
             <Card className="shadow-sm">

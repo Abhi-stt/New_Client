@@ -75,11 +75,6 @@ export function ManagerDashboard() {
           <p className="text-sm sm:text-base text-[#475569]">Manage your team and client assignments</p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-          <Button onClick={() => router.push('/tasks')} className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
-            <CheckSquare className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Manage Tasks</span>
-            <span className="sm:hidden">Tasks</span>
-          </Button>
           <Button variant="outline" onClick={() => router.push('/documents')} className="w-full sm:w-auto border-slate-200 text-[#475569] hover:border-[#6366F1] hover:text-[#6366F1]">
             <FileText className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Review Documents</span>
@@ -173,17 +168,6 @@ export function ManagerDashboard() {
               <span className="text-left">
                 <div className="font-medium">View Team Members</div>
                 <div className="text-xs text-gray-500">Manage {stats.teamMembers} team members</div>
-              </span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full justify-start bg-transparent hover:bg-green-50 border-green-200 hover:border-green-300 transition-colors"
-              onClick={() => router.push('/tasks')}
-            >
-              <CheckSquare className="mr-2 h-4 w-4 text-green-600" />
-              <span className="text-left">
-                <div className="font-medium">Manage Tasks</div>
-                <div className="text-xs text-gray-500">{stats.pendingTasks} pending, {stats.overdueItems} overdue</div>
               </span>
             </Button>
             <Button 

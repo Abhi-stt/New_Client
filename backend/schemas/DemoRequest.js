@@ -7,7 +7,18 @@ const DemoRequestSchema = new mongoose.Schema({
   company: { type: String, required: true },
   status: { 
     type: String, 
-    enum: ['pending', 'contacted', 'completed', 'cancelled'], 
+    enum: [
+      'pending',
+      'contacted',
+      'follow_up_1',
+      'follow_up_2',
+      'follow_up_3',
+      'completed',
+      'purchased',
+      'declined',
+      'not_interested',
+      'cancelled'
+    ], 
     default: 'pending' 
   },
   notes: { type: String },

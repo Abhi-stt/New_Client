@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -33,10 +33,23 @@ export function QueryDetailsDialog({ query, open, onOpenChange, onSuccess }: Que
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
+  const createdByRole = query?.createdByRole || "client"
+
+  const canTakeAction = useMemo(() => {
+    if (!user?.role) return false
+    if (user.role === "super_admin") {
+      return createdByRole === "admin"
+    }
+    if (user.role === "admin") {
+      return ["manager", "team_member", "client"].includes(createdByRole)
+    }
+    return false
+  }, [user?.role, createdByRole])
+
   const handleStatusUpdate = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${HOST_URL}/api/queries/${query.id}/status`, {
+      const response = await fetch(`${HOST_URL}/api/queries/${query.id}/status?role=${user?.role}&userId=${user?.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -58,12 +71,11 @@ export function QueryDetailsDialog({ query, open, onOpenChange, onSuccess }: Que
 
     setLoading(true)
     try {
-      const res = await fetch(`${HOST_URL}/api/queries/${query.id}/responses`, {
+      const res = await fetch(`${HOST_URL}/api/queries/${query.id}/responses?role=${user?.role}&userId=${user?.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           response,
-          userId: user?.id,
           userName: user?.name,
         }),
       })
@@ -109,8 +121,6 @@ export function QueryDetailsDialog({ query, open, onOpenChange, onSuccess }: Que
   }
 
   if (!query) return null
-
-  const canManageQuery = user?.role === "admin" || user?.role === "manager" || user?.role === "team_member"
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,7 +172,7 @@ export function QueryDetailsDialog({ query, open, onOpenChange, onSuccess }: Que
           </div>
 
           {/* Status Update (for CA team) */}
-          {canManageQuery && (
+          {canTakeAction && (
             <div className="space-y-2">
               <Label htmlFor="status">Update Status</Label>
               <div className="flex space-x-2">
@@ -193,29 +203,48 @@ export function QueryDetailsDialog({ query, open, onOpenChange, onSuccess }: Que
 
             {/* Existing Responses */}
             <div className="space-y-3 max-h-60 overflow-y-auto">
-              {query.responses?.map((resp: any, index: number) => (
-                <div key={index} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">{resp.userName}</span>
-                    <span className="text-xs text-gray-500">{resp.createdAt}</span>
+              {query.responses?.length ? (
+                query.responses.map((resp: any, index: number) => (
+                  <div key={index} className="p-4 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">
+                        {resp.userName} <span className="text-xs text-muted-foreground">({resp.userRole})</span>
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {resp.createdAt ? new Date(resp.createdAt).toLocaleString() : ""}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{resp.text}</p>
                   </div>
-                  <p className="text-sm text-gray-700">{resp.text}</p>
-                </div>
-              )) || <p className="text-sm text-gray-500 italic">No responses yet</p>}
+                ))
+              ) : (
+                <p className="text-sm text-gray-500 italic">No responses yet</p>
+              )}
             </div>
 
-            {/* Add Response */}
-            <div className="space-y-2">
-              <Textarea
-                placeholder="Add your response..."
-                value={response}
-                onChange={(e) => setResponse(e.target.value)}
-                rows={4}
-              />
-              <Button onClick={handleAddResponse} disabled={loading || !response.trim()}>
-                Add Response
-              </Button>
-            </div>
+            {canTakeAction ? (
+              <div className="space-y-2">
+                <Textarea
+                  placeholder="Add your response..."
+                  value={response}
+                  onChange={(e) => setResponse(e.target.value)}
+                  rows={4}
+                />
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setResponse("")} disabled={loading}>
+                    Clear
+                  </Button>
+                  <Button onClick={handleAddResponse} disabled={loading || !response.trim()}>
+                    Add Response
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Only Admins (for manager/team/client tickets) or Super Admins (for admin tickets) can send replies. You
+                can view updates here as they arrive.
+              </p>
+            )}
           </div>
         </div>
 

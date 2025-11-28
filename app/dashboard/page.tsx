@@ -1,7 +1,7 @@
 "use client"
 
 import { useAuth } from "@/components/auth-provider"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { SuperAdminDashboard } from "@/components/dashboards/super-admin-dashboard"
@@ -14,6 +14,8 @@ import { FullPageLoader } from "@/components/ui/full-page-loader"
 export default function DashboardPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get("tab") ?? undefined
 
   useEffect(() => {
     if (!loading && !user) {
@@ -32,7 +34,7 @@ export default function DashboardPage() {
   const renderDashboard = () => {
     switch (user.role) {
       case "super_admin":
-        return <SuperAdminDashboard />
+        return <SuperAdminDashboard initialTab={tabParam as any} />
       case "admin":
         return <AdminDashboard />
       case "manager":

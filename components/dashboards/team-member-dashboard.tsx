@@ -66,11 +66,6 @@ export function TeamMemberDashboard() {
           <p className="text-sm sm:text-base text-gray-600">Track your tasks and client work</p>
         </div>
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-          <Button onClick={() => window.location.href = '/tasks'} className="w-full sm:w-auto bg-gradient-to-r from-[#6366F1] to-[#A855F7] hover:from-[#4F46E5] hover:to-[#9333EA] text-white border-0 shadow-lg shadow-[#6366F1]/25">
-            <CheckSquare className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Manage Tasks</span>
-            <span className="sm:hidden">Tasks</span>
-          </Button>
           <Button variant="outline" className="w-full sm:w-auto border-[#6366F1] text-[#6366F1] hover:bg-[#6366F1]/10 hover:border-[#4F46E5]">
             <Upload className="mr-2 h-4 w-4" />
             <span className="hidden sm:inline">Upload Document</span>
@@ -150,14 +145,6 @@ export function TeamMemberDashboard() {
             <CardDescription>Common tasks and actions</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button 
-              variant="outline" 
-              className="w-full justify-start bg-transparent hover:bg-gray-50"
-              onClick={() => router.push('/tasks')}
-            >
-              <CheckSquare className="mr-2 h-4 w-4" />
-              View My Tasks
-            </Button>
             <Button 
               variant="outline" 
               className="w-full justify-start bg-transparent hover:bg-gray-50"

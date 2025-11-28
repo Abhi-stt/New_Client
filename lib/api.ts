@@ -78,6 +78,16 @@ export const api = {
   documentUpload: `${API_BASE_URL}/documents/upload`,
   documentRequest: `${API_BASE_URL}/documents/request`,
   documentDownload: (id: string) => `${API_BASE_URL}/documents/${id}/download`,
+
+  // Case & hearing management
+  cases: `${API_BASE_URL}/cases`,
+  caseStats: `${API_BASE_URL}/cases/stats/overview`,
+  caseReports: `${API_BASE_URL}/cases/reports/cases`,
+  caseDocumentsUpload: (id: string) => `${API_BASE_URL}/cases/${id}/documents`,
+  caseManualReminder: (id: string) => `${API_BASE_URL}/cases/${id}/reminders/manual`,
+  hearings: `${API_BASE_URL}/hearings`,
+  hearingReports: `${API_BASE_URL}/hearings/reports`,
+  hearingsByCase: (id: string) => `${API_BASE_URL}/hearings/case/${id}`,
   
   // Team endpoints
   teamMembers: `${API_BASE_URL}/users/team-members`,
@@ -104,6 +114,8 @@ export const api = {
   superAdminDeleteUser: (id: string) => `${API_BASE_URL}/super-admin/users/${id}`,
   superAdminDemoRequests: `${API_BASE_URL}/super-admin/demo-requests`,
   superAdminUpdateDemoRequest: (id: string) => `${API_BASE_URL}/super-admin/demo-requests/${id}`,
+  superAdminResetUserCredentials: (id: string) => `${API_BASE_URL}/super-admin/users/${id}/reset-credentials`,
+  superAdminResetClientCredentials: (id: string) => `${API_BASE_URL}/super-admin/clients/${id}/reset-credentials`,
   
   // Calendar endpoints
   calendarEvents: `${API_BASE_URL}/calendar-events`,

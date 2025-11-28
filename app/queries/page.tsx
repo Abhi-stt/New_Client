@@ -62,7 +62,7 @@ export default function QueriesPage() {
 
   const updateQueryStatus = async (queryId: string, status: string) => {
     try {
-      const response = await fetch(`${HOST_URL}/api/queries/${queryId}/status`, {
+      const response = await fetch(`${HOST_URL}/api/queries/${queryId}/status?role=${user?.role}&userId=${user?.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),

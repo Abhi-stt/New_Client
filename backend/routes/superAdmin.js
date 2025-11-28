@@ -2,9 +2,19 @@ const express = require('express');
 const User = require('../schemas/User');
 const UserActivity = require('../schemas/UserActivity');
 const DemoRequest = require('../schemas/DemoRequest');
+const Client = require('../schemas/Client');
 const { validateUser, sanitizeInput, requireSuperAdmin } = require('../middleware/validation');
 const { checkEmailUnique } = require('../utils/validations');
 const router = express.Router();
+
+const generateTemporaryPassword = () => {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$!';
+  let password = '';
+  for (let i = 0; i < 12; i += 1) {
+    password += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+  }
+  return password;
+};
 
 // All routes require super admin access
 router.use(requireSuperAdmin);
@@ -180,6 +190,110 @@ router.delete('/users/:userId', async (req, res) => {
   }
 });
 
+// Reset user credentials (super admin only)
+router.post('/users/:userId/reset-credentials', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { userId: requestedBy } = req.query;
+
+    if (!requestedBy) {
+      return res.status(400).json({ error: 'Requester user ID is required' });
+    }
+
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const temporaryPassword = generateTemporaryPassword();
+    targetUser.password = temporaryPassword;
+    // Reset security assistance fields
+    targetUser.twoFactorCode = undefined;
+    targetUser.twoFactorFailedAttempts = 0;
+    targetUser.twoFactorLockedUntil = null;
+    await targetUser.save();
+
+    await new UserActivity({
+      userId: requestedBy,
+      action: 'reset_user_credentials',
+      description: `Reset credentials for ${targetUser.name} (${targetUser.email})`,
+      metadata: {
+        targetUserId: userId,
+        role: targetUser.role,
+      },
+    }).save();
+
+    res.json({
+      message: 'User credentials reset successfully',
+      tempPassword: temporaryPassword,
+    });
+  } catch (error) {
+    console.error('Reset user credentials error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reset or issue client credentials (super admin only)
+router.post('/clients/:clientId/reset-credentials', async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    const { userId: requestedBy } = req.query;
+
+    if (!requestedBy) {
+      return res.status(400).json({ error: 'Requester user ID is required' });
+    }
+
+    const client = await Client.findById(clientId);
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+
+    const temporaryPassword = generateTemporaryPassword();
+    let linkedUser = await User.findOne({ email: client.email });
+
+    if (linkedUser) {
+      linkedUser.password = temporaryPassword;
+    } else {
+      const { getUserAdminId, setOwnershipFields } = require('../utils/accessControl');
+      const userAdminId = await getUserAdminId(requestedBy);
+      const ownershipFields = setOwnershipFields('super_admin', requestedBy, userAdminId);
+
+      linkedUser = new User({
+        name: client.name,
+        email: client.email,
+        role: 'client',
+        password: temporaryPassword,
+        status: 'active',
+        ...ownershipFields,
+      });
+    }
+
+    linkedUser.twoFactorCode = undefined;
+    linkedUser.twoFactorFailedAttempts = 0;
+    linkedUser.twoFactorLockedUntil = null;
+    await linkedUser.save();
+
+    await new UserActivity({
+      userId: requestedBy,
+      action: 'reset_client_credentials',
+      description: `Reset credentials for client ${client.name} (${client.email})`,
+      metadata: {
+        clientId,
+        linkedUserId: linkedUser._id,
+      },
+    }).save();
+
+    res.json({
+      message: 'Client credentials reset successfully',
+      tempPassword: temporaryPassword,
+      userId: linkedUser._id,
+    });
+  } catch (error) {
+    console.error('Reset client credentials error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get user activities (super admin only)
 router.get('/activities', async (req, res) => {
   try {
@@ -314,11 +428,26 @@ router.put('/demo-requests/:requestId', async (req, res) => {
     const { userId: updatedBy } = req.query;
     const { status, notes } = req.body;
 
+    if (!status) {
+      return res.status(400).json({ error: 'Status is required' });
+    }
+
     const updateData = {};
     if (status) updateData.status = status;
     if (notes !== undefined) updateData.notes = notes;
     
-    if (status === 'contacted' || status === 'completed') {
+    const statusesRequiringContact = [
+      'contacted',
+      'follow_up_1',
+      'follow_up_2',
+      'follow_up_3',
+      'completed',
+      'purchased',
+      'declined',
+      'not_interested',
+    ];
+
+    if (statusesRequiringContact.includes(status)) {
       updateData.contactedBy = updatedBy;
       updateData.contactedAt = new Date();
     }

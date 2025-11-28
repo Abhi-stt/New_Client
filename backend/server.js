@@ -6,12 +6,15 @@ const fs = require('fs');
 const path = require('path');
 const nodeCron = require('node-cron');
 const Document = require('./schemas/Document');
+const Case = require('./schemas/Case');
+const Hearing = require('./schemas/Hearing');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 
 const User = require('./schemas/User');
 const googleSheetsService = require('./services/googleSheetsService');
 const sharePointService = require('./services/sharePointService');
+const notificationService = require('./services/notificationService');
 
 const app = express();
 
@@ -103,6 +106,8 @@ const taskRoutes = require('./routes/task');
 const serviceRoutes = require('./routes/service');
 const queryRoutes = require('./routes/query');
 const documentRoutes = require('./routes/document');
+const caseRoutes = require('./routes/case');
+const hearingRoutes = require('./routes/hearing');
 const calendarEventRoutes = require('./routes/calendarEvent');
 const dashboardRoutes = require('./routes/dashboard');
 const superAdminRoutes = require('./routes/superAdmin');
@@ -120,6 +125,8 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/queries', queryRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/cases', caseRoutes);
+app.use('/api/hearings', hearingRoutes);
 app.use('/api/calendar-events', calendarEventRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/super-admin', superAdminRoutes);
@@ -293,6 +300,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+const DAY_IN_MS = 24 * 60 * 60 * 1000;
+
 // Scheduled job: runs every day at 8am
 nodeCron.schedule('0 8 * * *', async () => {
   try {
@@ -341,6 +350,207 @@ nodeCron.schedule('0 8 * * *', async () => {
     console.log('Document reminders and follow-ups sent.');
   } catch (err) {
     console.error('Error in scheduled document reminders:', err);
+  }
+});
+
+// Automated reminders for case deadlines and reply due dates
+nodeCron.schedule('15 7 * * *', async () => {
+  try {
+    const now = new Date();
+    const sevenDaysAhead = new Date(now.getTime() + 7 * DAY_IN_MS);
+    const cases = await Case.find({
+      $or: [
+        { dueDate: { $gte: now, $lte: sevenDaysAhead } },
+        { replyDueDate: { $gte: now, $lte: sevenDaysAhead } },
+      ],
+    }).select(
+      'caseTitle dueDate replyDueDate reminderPreferences clientSnapshot assigneeId lastSubmissionReminderForDate lastReplyReminderForDate reminderLogs status'
+    );
+
+    if (!cases.length) return;
+
+    const assigneeIds = cases.map((caseItem) => caseItem.assigneeId).filter(Boolean);
+    const assignees = assigneeIds.length
+      ? await User.find({ _id: { $in: assigneeIds } }).select('email phone')
+      : [];
+    const assigneeMap = new Map(assignees.map((user) => [user._id.toString(), user]));
+
+    const casesToUpdate = new Set();
+
+    for (const caseItem of cases) {
+      const contacts = {
+        email:
+          caseItem.clientSnapshot?.email ||
+          assigneeMap.get(caseItem.assigneeId?.toString())?.email,
+        sms:
+          caseItem.clientSnapshot?.phone ||
+          assigneeMap.get(caseItem.assigneeId?.toString())?.phone,
+        whatsapp: caseItem.clientSnapshot?.phone,
+      };
+
+      const preferredChannels = (caseItem.reminderPreferences?.channels || ['email']).filter((channel) => channel !== 'whatsapp');
+      const channels = preferredChannels.length ? preferredChannels : ['email'];
+
+      if (!Array.isArray(caseItem.reminderLogs)) {
+        caseItem.reminderLogs = [];
+      }
+
+      if (caseItem.dueDate) {
+        const diffDays = Math.ceil((caseItem.dueDate - now) / DAY_IN_MS);
+        const windowDays = caseItem.reminderPreferences?.daysBeforeDue ?? 3;
+        const alreadyReminded =
+          caseItem.lastSubmissionReminderForDate &&
+          caseItem.lastSubmissionReminderForDate.getTime() === caseItem.dueDate.getTime();
+
+        if (diffDays >= 0 && diffDays <= windowDays && !alreadyReminded) {
+          await notificationService.dispatchReminder({
+            channels,
+            contacts,
+            subject: `Submission deadline reminder: ${caseItem.caseTitle}`,
+            html: `<p>The submission deadline for <strong>${caseItem.caseTitle}</strong> is on <strong>${caseItem.dueDate.toLocaleDateString()}</strong>.</p>
+                   <p>Current status: ${caseItem.status}</p>`,
+            smsText: `Submission due: ${caseItem.caseTitle} on ${caseItem.dueDate.toLocaleDateString()}`,
+          });
+
+          caseItem.lastSubmissionReminderForDate = caseItem.dueDate;
+          caseItem.reminderLogs.push({
+            type: 'submission',
+            channel: channels.join(', '),
+            sentAt: new Date(),
+            status: 'auto',
+            message: `Reminder sent for deadline ${caseItem.dueDate.toLocaleDateString()}`,
+          });
+          casesToUpdate.add(caseItem);
+        }
+      }
+
+      if (caseItem.replyDueDate) {
+        const diffDays = Math.ceil((caseItem.replyDueDate - now) / DAY_IN_MS);
+        const windowDays = caseItem.reminderPreferences?.daysBeforeReply ?? 2;
+        const alreadyReminded =
+          caseItem.lastReplyReminderForDate &&
+          caseItem.lastReplyReminderForDate.getTime() === caseItem.replyDueDate.getTime();
+
+        if (diffDays >= 0 && diffDays <= windowDays && !alreadyReminded) {
+          await notificationService.dispatchReminder({
+            channels,
+            contacts,
+            subject: `Reply due reminder: ${caseItem.caseTitle}`,
+            html: `<p>The reply for <strong>${caseItem.caseTitle}</strong> is due on <strong>${caseItem.replyDueDate.toLocaleDateString()}</strong>.</p>`,
+            smsText: `Reply due: ${caseItem.caseTitle} on ${caseItem.replyDueDate.toLocaleDateString()}`,
+          });
+
+          caseItem.lastReplyReminderForDate = caseItem.replyDueDate;
+          caseItem.reminderLogs.push({
+            type: 'reply',
+            channel: channels.join(', '),
+            sentAt: new Date(),
+            status: 'auto',
+            message: `Reminder sent for reply ${caseItem.replyDueDate.toLocaleDateString()}`,
+          });
+          casesToUpdate.add(caseItem);
+        }
+      }
+    }
+
+    await Promise.all(Array.from(casesToUpdate).map((caseItem) => caseItem.save()));
+  } catch (error) {
+    console.error('Case deadline reminder error:', error);
+  }
+});
+
+// Automated reminders for upcoming hearings
+nodeCron.schedule('45 7 * * *', async () => {
+  try {
+    const now = new Date();
+    const horizon = new Date(now.getTime() + 2 * DAY_IN_MS);
+    const hearings = await Hearing.find({
+      hearingDate: { $gte: now, $lte: horizon },
+    }).select(
+      'caseId caseTitle hearingDate reminderChannels remindBeforeDays lastReminderSentForDate purpose'
+    );
+
+    if (!hearings.length) return;
+
+    const caseIds = hearings.map((hearing) => hearing.caseId);
+    const cases = await Case.find({ _id: { $in: caseIds } }).select(
+      'caseTitle reminderPreferences clientSnapshot assigneeId reminderLogs'
+    );
+    const caseMap = new Map(cases.map((caseItem) => [caseItem._id.toString(), caseItem]));
+
+    const assigneeIds = cases.map((caseItem) => caseItem.assigneeId).filter(Boolean);
+    const assignees = assigneeIds.length
+      ? await User.find({ _id: { $in: assigneeIds } }).select('email phone')
+      : [];
+    const assigneeMap = new Map(assignees.map((user) => [user._id.toString(), user]));
+
+    const casesToUpdate = new Set();
+    const hearingsToUpdate = new Set();
+
+    for (const hearing of hearings) {
+      const caseItem = caseMap.get(hearing.caseId?.toString());
+      if (!caseItem) continue;
+
+      const diffDays = Math.ceil((hearing.hearingDate - now) / DAY_IN_MS);
+      const reminderWindow =
+        hearing.remindBeforeDays || caseItem.reminderPreferences?.daysBeforeHearing || 1;
+      const alreadyReminded =
+        hearing.lastReminderSentForDate &&
+        hearing.lastReminderSentForDate.getTime() === hearing.hearingDate.getTime();
+
+      if (diffDays < 0 || diffDays > reminderWindow || alreadyReminded) {
+        continue;
+      }
+
+      const contacts = {
+        email:
+          caseItem.clientSnapshot?.email ||
+          assigneeMap.get(caseItem.assigneeId?.toString())?.email,
+        sms:
+          caseItem.clientSnapshot?.phone ||
+          assigneeMap.get(caseItem.assigneeId?.toString())?.phone,
+        whatsapp: caseItem.clientSnapshot?.phone,
+      };
+
+      if (!Array.isArray(caseItem.reminderLogs)) {
+        caseItem.reminderLogs = [];
+      }
+
+      const channels =
+        (hearing.reminderChannels && hearing.reminderChannels.length > 0
+          ? hearing.reminderChannels
+          : caseItem.reminderPreferences?.channels) || ['email'];
+      const sanitizedChannels = channels.filter((channel) => channel !== 'whatsapp');
+      const finalChannels = sanitizedChannels.length ? sanitizedChannels : ['email'];
+
+      await notificationService.dispatchReminder({
+        channels: finalChannels,
+        contacts,
+        subject: `Hearing reminder: ${hearing.caseTitle}`,
+        html: `<p>Your hearing for <strong>${hearing.caseTitle}</strong> is scheduled on <strong>${hearing.hearingDate.toLocaleString()}</strong>.</p>
+               ${hearing.purpose ? `<p>Purpose: ${hearing.purpose}</p>` : ''}`,
+        smsText: `Hearing: ${hearing.caseTitle} on ${hearing.hearingDate.toLocaleDateString()}`,
+      });
+
+      hearing.lastReminderSentForDate = hearing.hearingDate;
+      hearingsToUpdate.add(hearing);
+
+      caseItem.reminderLogs.push({
+        type: 'hearing',
+        channel: finalChannels.join(', '),
+        sentAt: new Date(),
+        status: 'auto',
+        message: `Reminder sent for hearing on ${hearing.hearingDate.toLocaleDateString()}`,
+      });
+      casesToUpdate.add(caseItem);
+    }
+
+    await Promise.all([
+      ...Array.from(casesToUpdate).map((caseItem) => caseItem.save()),
+      ...Array.from(hearingsToUpdate).map((hearing) => hearing.save()),
+    ]);
+  } catch (error) {
+    console.error('Hearing reminder error:', error);
   }
 });
 
